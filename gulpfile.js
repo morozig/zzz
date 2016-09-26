@@ -1,17 +1,19 @@
-var gulp = require("gulp");
-var browserify = require("browserify");
-var source = require('vinyl-source-stream');
-var tsify = require("tsify");
+const gulp = require('gulp');
+const browserify = require('browserify');
+const source = require('vinyl-source-stream');
+const tsify = require('tsify');
+const ts = require('gulp-typescript');
+const mocha = require('gulp-mocha');
 var paths = {
     pages: ['src/*.html']
 };
 
-gulp.task("copy-html", function () {
+gulp.task('copy-html', () => {
     return gulp.src(paths.pages)
-        .pipe(gulp.dest("build"));
+        .pipe(gulp.dest('build/release'));
 });
 
-gulp.task("default", ["copy-html"], function () {
+gulp.task('bundle', ['copy-html'], () => {
     return browserify({
         basedir: '.',
         debug: true,
@@ -22,5 +24,22 @@ gulp.task("default", ["copy-html"], function () {
     .plugin(tsify)
     .bundle()
     .pipe(source('bundle.js'))
-    .pipe(gulp.dest("build"));
+    .pipe(gulp.dest('build/release'));
 });
+
+
+gulp.task('tsc', ['bundle'], () => {
+    gulp.src('src/**/*.ts')
+        .pipe(ts({})).js
+        .pipe(gulp.dest('build/src'));
+    return gulp.src('test/**/*.ts')
+        .pipe(ts({})).js
+        .pipe(gulp.dest('build/test'));
+});
+
+gulp.task('mocha', ['tsc'], () => {
+    return gulp.src('build/test/node/test-greet.js', {read: false})
+        .pipe(mocha({}));
+});
+
+gulp.task('default', ['mocha']);

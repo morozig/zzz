@@ -23,7 +23,10 @@
   "homepage": "https://github.com/morozig/zzz#readme",
   "devDependencies": {
     "browserify": "^13.1.0",
+    "chai": "^3.5.0",
     "gulp": "^3.9.1",
+    "gulp-mocha": "^3.0.1",
+    "gulp-typescript": "^3.0.1",
     "tsify": "^1.0.7",
     "typescript": "^2.0.3",
     "vinyl-source-stream": "^1.1.0"
