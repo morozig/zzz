@@ -135,12 +135,16 @@ gulp.task('mocha-browser', ['add-mocha'], (callback) => {
         'spec',
         JSON.stringify({useColors: true})
     ];
-
+    console.log(phantomjs.path);
     const phantomMocha = spawn(phantomjs.path, args);
     phantomMocha.stdout.on('data', (data) => {
         const text = data.toString('utf8');
         process.stdout.write(text.replace('✓', '√'));
     });
+    phantomMocha.stderr.on('data', (data) => {
+        console.log(`stderr: ${data}`);
+    });
+    
     phantomMocha.on('close', (code) => {
         connect.serverClose();
         setTimeout(callback, 5, code);
