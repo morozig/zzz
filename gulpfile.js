@@ -11,12 +11,7 @@ const glob = require('glob');
 const del = require('del');
 const jsdom = require("jsdom").jsdom;
 const fs = require("fs");
-
-const phantomjsBin = path.join(
-    'node_modules',
-    '.bin',
-    'mocha-phantomjs'
-);
+const phantomjs = require('phantomjs-prebuilt');
 
 const paths = {
     pages: ['src/*.html'],
@@ -66,7 +61,7 @@ gulp.task('mocha-node', ['tsc'], () => {
 });
 
 gulp.task('browserify-tests', ['mocha-node'], () => {
-    var testFiles = glob.sync("test/browser/test-*.ts");
+    const testFiles = glob.sync("test/browser/test-*.ts");
     return browserify({
         basedir: '.',
         debug: true,
@@ -87,6 +82,10 @@ gulp.task('copy-mocha-browser', ['browserify-tests'], () => {
 
 gulp.task('add-mocha', ['copy-mocha-browser'], (callback) => {
     fs.readFile('src/index.html', 'utf8', (err, text) => {
+        if (err){
+            callback(err);
+            return;
+        }
         const document = jsdom(text);
         const window = document.defaultView;
 
@@ -130,20 +129,21 @@ gulp.task('mocha-browser', ['add-mocha'], (callback) => {
         port: 3000,
         root: 'build/test/browser'
     });
-    const phantomjs = spawn(
-        phantomjsBin,
-        ['http://localhost:3000'],
-        { shell: true }
-    );
-    phantomjs.stdout.on('data', (data) => {
-        process.stdout.write(`${data}`);
+    const args = [
+        require.resolve('mocha-phantomjs-core'),
+        'http://localhost:3000',
+        'spec',
+        JSON.stringify({useColors: true})
+    ];
+
+    const phantomMocha = spawn(phantomjs.path, args);
+    phantomMocha.stdout.on('data', (data) => {
+        const text = data.toString('utf8');
+        process.stdout.write(text.replace('✓', '√'));
     });
-    phantomjs.stderr.on('data', (data) => {
-        process.stdout.write(`${data}`);
-    });
-    phantomjs.on('close', () => {
+    phantomMocha.on('close', (code) => {
         connect.serverClose();
-        setTimeout(callback, 5);
+        setTimeout(callback, 5, code);
     });
 });
 
