@@ -89,17 +89,17 @@ gulp.task('add-mocha', ['copy-mocha-browser'], (callback) => {
         const document = jsdom(text);
         const window = document.defaultView;
 
-        let element = document.createElement('link');
+        let element = document.createElement('script');
+        element.src = 'mocha.js';
+        document.head.appendChild(element);
+        
+        element = document.createElement('link');
         element.rel = 'stylesheet';
         element.href = 'mocha.css';
         document.head.appendChild(element);
 
         element = document.createElement('div');
         element.id = 'mocha';
-        document.body.appendChild(element);
-
-        element = document.createElement('script');
-        element.src = 'mocha.js';
         document.body.appendChild(element);
 
         element = document.createElement('script');
@@ -114,7 +114,6 @@ gulp.task('add-mocha', ['copy-mocha-browser'], (callback) => {
         element.innerHTML = 'mocha.run();';
         document.body.appendChild(element);
 
-        // console.log(window.document.documentElement.outerHTML);
         fs.writeFile(
             'build/test/browser/index.html',
             window.document.documentElement.outerHTML,
@@ -135,16 +134,16 @@ gulp.task('mocha-browser', ['add-mocha'], (callback) => {
         'spec',
         JSON.stringify({useColors: true})
     ];
-    console.log(phantomjs.path);
     const phantomMocha = spawn(phantomjs.path, args);
     phantomMocha.stdout.on('data', (data) => {
-        const text = data.toString('utf8');
-        process.stdout.write(text.replace('✓', '√'));
+        let text = data.toString('utf8');
+        if (process.platform === 'win32') text = text.replace('✓', '√');
+        process.stdout.write(text);
     });
     phantomMocha.stderr.on('data', (data) => {
         console.log(`stderr: ${data}`);
     });
-    
+
     phantomMocha.on('close', (code) => {
         connect.serverClose();
         setTimeout(callback, 5, code);
