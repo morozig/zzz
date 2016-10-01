@@ -24,9 +24,14 @@
   "devDependencies": {
     "browserify": "^13.1.0",
     "chai": "^3.5.0",
+    "del": "^2.2.2",
+    "glob": "^7.1.0",
     "gulp": "^3.9.1",
+    "gulp-connect": "^5.0.0",
     "gulp-mocha": "^3.0.1",
     "gulp-typescript": "^3.0.1",
+    "jsdom": "^9.5.0",
+    "mocha-phantomjs": "^4.1.0",
     "tsify": "^1.0.7",
     "typescript": "^2.0.3",
     "vinyl-source-stream": "^1.1.0"
