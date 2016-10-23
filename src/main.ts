@@ -1,8 +1,12 @@
-import { sayHello } from "./greet";
+import * as CSP from './lib/CSPWrapper';
+import * as Field from './lib/Field';
+import * as ViewField from './lib/ViewField';
 
-function showHello(divName: string, name: string) {
-    const elt = document.getElementById(divName);
-    elt.textContent = sayHello(name);
-}
+const fieldInChannel = CSP.createChannel();
+const fieldOutChannel = Field.pipe(fieldInChannel);
+const viewFieldOutChannel = ViewField.pipe(fieldOutChannel);
 
-showHello("greeting", "TypeScript");
+fieldInChannel.put({
+    topic: CSP.Topic.GameSize,
+    value: 8
+});

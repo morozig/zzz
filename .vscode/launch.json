@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "node",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceRoot}",
+            "console": "internalConsole",
+            "sourceMaps": true,
+            "outFiles": ["${workspaceRoot}/build/**/*.js"],
+            "preLaunchTask": "compile"
+        },
+        {
+            "name": "Launch localhost with sourcemaps",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceRoot}",
+            "runtimeExecutable": "c:\\Program Files (x86)\\chrome-win32\\chrome.exe",
+            "sourceMaps": true
+        }
+    ]
+}
