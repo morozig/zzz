@@ -124,7 +124,7 @@ describe ('Field', () => {
             task => `${task.i}${task.j}${task.additional.colour}`
         ));
         const intersection = new Set([...result1].filter(x => result2.has(x)));
-        const resultsAreDifferent = intersection.size < 20;
+        const resultsAreDifferent = intersection.size < 33;
         const actual = resultsAreDifferent;
         const expected = true;
         expect(actual).to.equal(expected);

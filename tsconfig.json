@@ -3,5 +3,8 @@
         "rootDir": ".",
         "target": "es6",
         "noImplicitAny": true
-    }
+    },
+    "exclude": [
+        "node_modules"
+    ]
 }

@@ -6,6 +6,8 @@ const fieldInChannel = CSP.createChannel();
 const fieldOutChannel = Field.pipe(fieldInChannel);
 const viewFieldOutChannel = ViewField.pipe(fieldOutChannel);
 
+viewFieldOutChannel.pipe(fieldInChannel);
+
 fieldInChannel.put({
     topic: CSP.Topic.GameSize,
     value: 8

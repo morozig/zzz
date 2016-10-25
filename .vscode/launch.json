@@ -17,7 +17,7 @@
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:3000",
-            "webRoot": "${workspaceRoot}",
+            "webRoot": "${workspaceRoot}/build/release",
             "runtimeExecutable": "c:\\Program Files (x86)\\chrome-win32\\chrome.exe",
             "sourceMaps": true
         }

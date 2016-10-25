@@ -10,20 +10,21 @@ const del = require('del');
 const fs = require('fs');
 const phantomjs = require('phantomjs-prebuilt');
 const babel = require('gulp-babel');
-const change = require('gulp-change');
 const os = require('os');
 const sourcemaps = require('gulp-sourcemaps');
 const spawn = require('child_process').spawn;
 const jsdom = require('jsdom').jsdom;
 const gulpTypings = require('gulp-typings');
 const buffer = require('vinyl-buffer');
+const tsify = require("tsify");
 
 const paths = {
     pages: ['src/*.html'],
     mocha: [
         'node_modules/mocha/mocha.js',
         'node_modules/mocha/mocha.css'
-    ]
+    ],
+    vendor: ['node_modules/pixi.js/bin/pixi.min.js']
 };
 
 const tsProject = ts.createProject('tsconfig.json');
@@ -50,20 +51,11 @@ gulp.task('ts -> es6', () => {
         .pipe(gulp.dest('build'));
 });
 
-gulp.task('prepend-polyfill', () => {
-    return gulp.src([
-        'build/**/*.js',
-        '!build/test/browser/**'
-    ])
-        .pipe(change(content => 'import "babel-polyfill";' + content))
-        .pipe(gulp.dest('build'));
-});
-
 gulp.task('es6 -> es5', () => {
     return gulp.src('build/**/*.js')
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(babel({
-            presets: ['latest']
+            presets: ['es2015']
         }))
         .pipe(sourcemaps.write('.', {
             sourceRoot: '..'
@@ -74,7 +66,6 @@ gulp.task('es6 -> es5', () => {
 gulp.task('compile', gulp.series(
     'clean',
     'ts -> es6',
-    'prepend-polyfill',
     'es6 -> es5'
 ));
 
@@ -88,28 +79,43 @@ gulp.task('copy-assets-release', () => {
         .pipe(gulp.dest('build/release/assets'));
 });
 
+gulp.task('copy-vendor-release', () => {
+    return gulp.src(paths.vendor)
+        .pipe(gulp.dest('build/release/vendor'));
+});
+
 gulp.task('browserify-app', () => {
     return browserify({
         basedir: '.',
         debug: true,
-        entries: ['build/src/main.js'],
+        entries: ['src/main.ts'],
         cache: {},
         packageCache: {}
     })
+        .plugin(tsify)
+        .transform('babelify', {
+            presets: ['es2015'],
+            extensions: ['.ts']
+        })
         .bundle()
         .pipe(source('bundle.js'))
         .pipe(buffer())
+        .pipe(sourcemaps.init({loadMaps: true}))
+        .pipe(sourcemaps.write('./', {
+            sourceRoot: '../..'
+        }))
         .pipe(gulp.dest('build/release'));
 });
 
 gulp.task('prepare-release', gulp.series(
     'copy-html-release',
     'copy-assets-release',
+    'copy-vendor-release',
     'browserify-app'
 ));
 
 gulp.task('browserify-tests', () => {
-    const testFiles = glob.sync('build/test/browser/Test*.js');
+    const testFiles = glob.sync('test/browser/Test*.ts');
     return browserify({
         basedir: '.',
         debug: true,
@@ -117,7 +123,11 @@ gulp.task('browserify-tests', () => {
         cache: {},
         packageCache: {}
     })
-    .ignore('babel-polyfill')
+    .plugin(tsify)
+    .transform('babelify', {
+        presets: ['es2015'],
+        extensions: ['.ts']
+    })
     .bundle()
     .pipe(source('all-tests.js'))
     .pipe(gulp.dest('build/test/browser'));
@@ -136,7 +146,6 @@ gulp.task('inject-mocha', (callback) => {
         }
         const document = jsdom(text);
         const window = document.defaultView;
-
 
         const bundle = document.getElementById('bundle');
         let element = document.createElement('script');

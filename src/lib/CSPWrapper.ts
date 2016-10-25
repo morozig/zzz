@@ -4,7 +4,8 @@ const enum Topic {
     GameSize,
     FieldTask,
     CloseChannel,
-    Swipe
+    Swipe,
+    InputEvent
 }
 
 interface Message {
@@ -16,6 +17,7 @@ interface Channel{
     put: (message: Message) => Promise<undefined>;
     take: () => Promise<Message>;
     close: () => void;
+    pipe: (...channels: Channel[]) => void;
 }
 
 const DONE = {
@@ -35,6 +37,9 @@ const createChannel = () => {
         close(){
             channel.put(DONE);
             return channel.close();
+        },
+        pipe(...channels){
+            return channel.pipe(...channels);
         }
     } as Channel
 };
