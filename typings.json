@@ -3,7 +3,9 @@
   "dependencies": {},
   "globalDependencies": {
     "chai": "registry:dt/chai#3.4.0+20160601211834",
+    "jquery": "registry:dt/jquery#1.10.0+20160929162922",
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",
-    "pixi.js": "registry:dt/pixi.js#3.0.9+20160825215559"
+    "pixi.js": "registry:dt/pixi.js#3.0.9+20160825215559",
+    "tween.js": "registry:dt/tween.js#0.0.0+20160608102153"
   }
 }

@@ -27,10 +27,8 @@ interface Position {
 
 interface Task extends Position {
     action: TaskAction;
-    additional?: {
-        colour?: number,
-        to?: Position
-    }
+    colour?: number;
+    to?: Position;
 }
 
 interface Swipe extends Position{
@@ -54,10 +52,10 @@ const create = (channel: CSP.Channel, size: number, zombiz: Zombi[][]) => {
             zombiz[i][j] = zombi;
             zombi.status = Status.Idle;
             const task: Task = {
-                i: i,
-                j: j,
-                action: TaskAction.CreateZombi,
-                additional: {colour}
+                i,
+                j,
+                colour,
+                action: TaskAction.CreateZombi
             };
             channel.put({
                 topic: CSP.Topic.FieldTask,
@@ -89,22 +87,24 @@ const swap = (channel: CSP.Channel, swipe: Swipe, zombiz: Zombi[][]) => {
     channel.put({
         topic: CSP.Topic.FieldTask,
         value: {
-            i: zombi.i,
-            j: zombi.j,
+            i: zombiTo.i,
+            j: zombiTo.j,
             action: TaskAction.Move,
-            additional: {
-                to: zombiTo
+            to: {
+                i: zombi.i,
+                j: zombi.j
             }
-        }
+        } as Task
     });
     channel.put({
         topic: CSP.Topic.FieldTask,
         value: {
-            i: zombiTo.i,
-            j: zombiTo.j,
+            i: zombi.i,
+            j: zombi.j,
             action: TaskAction.Move,
-            additional: {
-                to: zombi
+            to: {
+                i: zombiTo.i,
+                j: zombiTo.j
             }
         }
     });
@@ -129,6 +129,12 @@ const pipe = (fieldInChannel: CSP.Channel) => {
                 }
                 case CSP.Topic.Swipe: {
                     swap(fieldOutChannel, message.value, zombiz);
+                    break;
+                }
+                case CSP.Topic.FieldTaskDone: {
+                    const task = message.value as Task;
+                    const zombi = zombiz[task.to.i][task.to.j];
+                    zombi.status = Status.Idle;
                     break;
                 }
             }

@@ -74,12 +74,12 @@ describe ('Field', () => {
         for (let task of tasks){
             if (task.i === 0) {
                 allMovesAreCorrect = task.j === 0;
-                allMovesAreCorrect = task.additional.to.i === 1;
-                allMovesAreCorrect = task.additional.to.j === 0;
+                allMovesAreCorrect = task.to.i === 1;
+                allMovesAreCorrect = task.to.j === 0;
             } else {
                 allMovesAreCorrect = task.j === 0;
-                allMovesAreCorrect = task.additional.to.i === 0;
-                allMovesAreCorrect = task.additional.to.j === 0;
+                allMovesAreCorrect = task.to.i === 0;
+                allMovesAreCorrect = task.to.j === 0;
             }
         }
         const actual = allMovesAreCorrect;
@@ -103,12 +103,12 @@ describe ('Field', () => {
         for (let task of tasks){
             if (task.j === 0) {
                 allMovesAreCorrect = task.i === 0;
-                allMovesAreCorrect = task.additional.to.i === 0;
-                allMovesAreCorrect = task.additional.to.j === 1;
+                allMovesAreCorrect = task.to.i === 0;
+                allMovesAreCorrect = task.to.j === 1;
             } else {
                 allMovesAreCorrect = task.i === 0;
-                allMovesAreCorrect = task.additional.to.i === 0;
-                allMovesAreCorrect = task.additional.to.j === 0;
+                allMovesAreCorrect = task.to.i === 0;
+                allMovesAreCorrect = task.to.j === 0;
             }
         }
         const actual = allMovesAreCorrect;

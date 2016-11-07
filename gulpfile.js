@@ -13,18 +13,22 @@ const babel = require('gulp-babel');
 const os = require('os');
 const sourcemaps = require('gulp-sourcemaps');
 const spawn = require('child_process').spawn;
-const jsdom = require('jsdom').jsdom;
+const jsdom = require('jsdom');
 const gulpTypings = require('gulp-typings');
 const buffer = require('vinyl-buffer');
 const tsify = require("tsify");
+const nodeJquery = require("jquery");
+const html = require('html');
 
 const paths = {
     pages: ['src/*.html'],
-    mocha: [
+    icon: 'assets/icons/favicon.ico',
+    testLibs: [
         'node_modules/mocha/mocha.js',
-        'node_modules/mocha/mocha.css'
+        'node_modules/mocha/mocha.css',
+        'node_modules/jquery/dist/jquery.min.js'
     ],
-    vendor: ['node_modules/pixi.js/bin/pixi.min.js']
+    pixi: ['node_modules/pixi.js/bin/pixi.min.js']
 };
 
 const tsProject = ts.createProject('tsconfig.json');
@@ -55,7 +59,8 @@ gulp.task('es6 -> es5', () => {
     return gulp.src('build/**/*.js')
         .pipe(sourcemaps.init({loadMaps: true}))
         .pipe(babel({
-            presets: ['es2015']
+            presets: ['es2015'],
+            plugins: ['transform-runtime']
         }))
         .pipe(sourcemaps.write('.', {
             sourceRoot: '..'
@@ -70,17 +75,17 @@ gulp.task('compile', gulp.series(
 ));
 
 gulp.task('copy-html-release', () => {
-    return gulp.src(paths.pages)
+    return gulp.src(paths.pages.concat(paths.icon))
         .pipe(gulp.dest('build/release'));
 });
 
 gulp.task('copy-assets-release', () => {
-    return gulp.src('assets/**')
+    return gulp.src('assets/**', '!assets/icons/**')
         .pipe(gulp.dest('build/release/assets'));
 });
 
 gulp.task('copy-vendor-release', () => {
-    return gulp.src(paths.vendor)
+    return gulp.src(paths.pixi)
         .pipe(gulp.dest('build/release/vendor'));
 });
 
@@ -95,15 +100,16 @@ gulp.task('browserify-app', () => {
         .plugin(tsify)
         .transform('babelify', {
             presets: ['es2015'],
-            extensions: ['.ts']
+            extensions: ['.ts'],
+            plugins: ['transform-runtime']
         })
         .bundle()
         .pipe(source('bundle.js'))
-        .pipe(buffer())
-        .pipe(sourcemaps.init({loadMaps: true}))
-        .pipe(sourcemaps.write('./', {
-            sourceRoot: '../..'
-        }))
+        // .pipe(buffer())
+        // .pipe(sourcemaps.init({loadMaps: true}))
+        // .pipe(sourcemaps.write('./', {
+        //     sourceRoot: '../..'
+        // }))
         .pipe(gulp.dest('build/release'));
 });
 
@@ -126,7 +132,8 @@ gulp.task('browserify-tests', () => {
     .plugin(tsify)
     .transform('babelify', {
         presets: ['es2015'],
-        extensions: ['.ts']
+        extensions: ['.ts'],
+        plugins: ['transform-runtime']
     })
     .bundle()
     .pipe(source('all-tests.js'))
@@ -134,57 +141,48 @@ gulp.task('browserify-tests', () => {
 });
 
 gulp.task('copy-test-files', () => {
-    return gulp.src(paths.mocha.concat('build/release/**'))
+    return gulp.src('build/release/**')
         .pipe(gulp.dest('build/test/browser'));
 });
 
+gulp.task('copy-test-libs', () => {
+    return gulp.src(paths.testLibs)
+        .pipe(gulp.dest('build/test/browser/vendor'));
+});
+
 gulp.task('inject-mocha', (callback) => {
-    fs.readFile('src/index.html', 'utf8', (err, text) => {
-        if (err){
-            callback(err);
-            return;
+    jsdom.env({
+        file: "src/index.html",
+        done: (error, window) => {
+            if (error) callback(error);
+            const document = window.document;
+            var $ = nodeJquery(window);
+            $('title').after('<script src="vendor/mocha.js">');
+            $('head').append('<script src="vendor/jquery.min.js">');
+            $('head').append('<link rel="stylesheet" href="vendor/mocha.css">');
+            $('body').append('<div id="mocha">');
+            $('body').append('<script>mocha.setup("bdd");</script>');
+            $('body').append('<script src="all-tests.js">');
+            $('body').append('<script>mocha.run();</script>');
+
+            const prettyHTML = html.prettyPrint(
+                jsdom.serializeDocument(document)
+            );
+            
+            fs.writeFile(
+                'build/test/browser/index.html',
+                prettyHTML,
+                'utf8',
+                callback
+            );
         }
-        const document = jsdom(text);
-        const window = document.defaultView;
-
-        const bundle = document.getElementById('bundle');
-        let element = document.createElement('script');
-        element.src = 'mocha.js';
-        document.head.insertBefore(element, bundle);
-
-        element = document.createElement('link');
-        element.rel = 'stylesheet';
-        element.href = 'mocha.css';
-        document.head.appendChild(element);
-
-        element = document.createElement('div');
-        element.id = 'mocha';
-        document.body.appendChild(element);
-
-        element = document.createElement('script');
-        element.innerHTML = 'mocha.setup("bdd")';
-        document.body.appendChild(element);
-
-        element = document.createElement('script');
-        element.src = 'all-tests.js';
-        document.body.appendChild(element);
-
-        element = document.createElement('script');
-        element.innerHTML = 'mocha.run();';
-        document.body.appendChild(element);
-
-        fs.writeFile(
-            'build/test/browser/index.html',
-            window.document.documentElement.outerHTML,
-            'utf8',
-            callback
-        );
     });
 });
 
 gulp.task('prepare-browser-tests', gulp.series(
     'browserify-tests',
     'copy-test-files',
+    'copy-test-libs',
     'inject-mocha'
 ));
 
@@ -234,7 +232,7 @@ gulp.task('connect', () => {
     connect.server({
         // port: 3001,
         port: 3000,
-        // root: 'build/test/browser'
-        root: 'build/release'
+        root: 'build/test/browser'
+        // root: 'build/release'
     });
 });

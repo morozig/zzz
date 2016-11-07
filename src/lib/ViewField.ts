@@ -1,15 +1,16 @@
 import * as CSP from './CSPWrapper';
 import * as Field from '../../src/lib/Field';
+import * as TWEEN from 'tween.js';
 
 const textures = [
-    'assets/blue.png',
-    'assets/brown.png',
-    'assets/green.png',
-    'assets/grey.png',
-    'assets/red.png',
-    'assets/white.png',
-    'assets/yellow.png',
-    'assets/tile.png'
+    'assets/images/blue.png',
+    'assets/images/brown.png',
+    'assets/images/green.png',
+    'assets/images/grey.png',
+    'assets/images/red.png',
+    'assets/images/white.png',
+    'assets/images/yellow.png',
+    'assets/images/tile.png'
 ];
 
 const loadDOM = () => {
@@ -24,9 +25,12 @@ const loadTextures = (textures: string[]) => {
     });
 };
 
-interface Sprite {
+interface Point {
     x: number;
     y: number;
+}
+
+interface Sprite extends Point{
     interactive: boolean;
 }
 
@@ -55,6 +59,7 @@ const createEngine = () => {
     viewElement.appendChild(renderer.view);
     const stage = new PIXI.Container();
     const inputChannel = CSP.createChannel();
+    const tilesPerSecond = 10;
 
     const createSprite = (options: SpriteOptions) => {
         const sprite = new PIXI.Sprite(
@@ -69,7 +74,6 @@ const createEngine = () => {
             const point = event.data.getLocalPosition(stage);
             const type = (event.type === 'mousedown') ? 
                 InputEventType.MouseDown : InputEventType.MouseUp;
-            console.log(point, type);
             inputChannel.put({
                 topic: CSP.Topic.InputEvent,
                 value: {
@@ -99,9 +103,32 @@ const createEngine = () => {
         if (framesCount < maxFramesCount) framesCount++;
         averageFrameTime += (thisFrameTime - averageFrameTime) / framesCount;
         lastFrame = thisFrame;
+        TWEEN.update();
         renderer.render(stage);
     }
 
+    const tween = (sprite: Sprite, to: Point, callback: () => void) => {
+        const distance = Math.sqrt(
+            Math.pow(to.x - sprite.x, 2) + Math.pow(to.y - sprite.y, 2) 
+        );
+        const time = distance / 50 / tilesPerSecond * 1000;
+        const spriteCopy = {
+            x: sprite.x,
+            y: sprite.y
+        } as Point;
+        const toCopy = {
+            x: to.x,
+            y: to.y
+        } as Point;
+        new TWEEN.Tween(spriteCopy)
+            .to(toCopy, time)
+            .start()
+            .onUpdate(() => {
+                sprite.x = spriteCopy.x;
+                sprite.y = spriteCopy.y;
+            })
+            .onComplete(callback);
+    };
     const fps = document.getElementById('fps');
     setInterval(function(){
         fps.innerHTML = 'Fps: ' + (1000 / averageFrameTime).toFixed();
@@ -109,8 +136,20 @@ const createEngine = () => {
     return {
         createSprite,
         start: animate,
-        inputChannel
+        inputChannel,
+        tween
     };
+};
+
+const ortoNorm = (x: number, y: number) => {
+    const xSign = Math.sign(x);
+    const ySign = Math.sign(y);
+    const xLength = Math.abs(x);
+    const yLength = Math.abs(y);
+    if (Math.max(xLength, yLength) < 25) return null;
+    return xLength > yLength ? 
+        {i: xSign, j: 0} :
+        {i: 0, j: ySign};
 };
 
 const pipe = (viewFieldInChannel: CSP.Channel) => {
@@ -129,22 +168,13 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
 
         const xToi = (x: number) => (x - xLeft) / SPRITE_SIZE;
         const yToj = (y: number) => (yBottom - y) / SPRITE_SIZE - 1;
+        const iTox = (i: number) => xLeft + i * SPRITE_SIZE;
+        const jToy = (j: number) => yBottom - (j + 1) * SPRITE_SIZE
 
-        const ortoNorm = (x: number, y: number) => {
-            var xSign = Math.sign(x);
-            var ySign = Math.sign(y);
-            var xLength = Math.abs(x);
-            var yLength = Math.abs(y);
-            if (Math.max(xLength, yLength) < 25) return null;
-            return xLength > yLength ? 
-                {i: xSign, j: 0} :
-                {i: 0, j: ySign};
-        };
-
-        for (var i = 0; i < GAME_SIZE / 2; i++){
-            for (var j = 0; j < GAME_SIZE / 2; j++){
-                engine.createSprite({
-                    texture: 'assets/tile.png',
+        for (let i = 0; i < GAME_SIZE / 2; i++){
+            for (let j = 0; j < GAME_SIZE / 2; j++){
+                const sprite = engine.createSprite({
+                    texture: 'assets/images/tile.png',
                     x: xLeft + i * 2 * SPRITE_SIZE,
                     y: yTop + j * 2 * SPRITE_SIZE,
                     interactive: false
@@ -152,6 +182,8 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
             }
         }
 
+        const zombiz: Sprite[][] = [];
+        for (let i = 0; i < GAME_SIZE; i++) zombiz[i] = [];
         (async () => {
             while (true){
                 const message = await viewFieldInChannel.take();
@@ -163,14 +195,25 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                 switch (task.action) {
                     case Field.TaskAction.CreateZombi: {
                         const sprite = engine.createSprite({
-                            texture: textures[task.additional.colour],
-                            x: xLeft + task.i * SPRITE_SIZE,
-                            y: yBottom - (task.j + 1) * SPRITE_SIZE
+                            texture: textures[task.colour],
+                            x: iTox(task.i),
+                            y: jToy(task.j)
                         });
+                        zombiz[task.i][task.j] = sprite;
                         break;
                     }
                     case Field.TaskAction.Move: {
-                        console.log(task);
+                        const sprite = zombiz[task.i][task.j];
+                        const to = zombiz[task.to.i][task.to.j];
+                        sprite.interactive = false;
+                        engine.tween(sprite, to, () => {
+                            sprite.interactive = true;
+                            zombiz[task.to.i][task.to.j] = sprite;
+                            viewFieldOutChannel.put({
+                                topic: CSP.Topic.FieldTaskDone,
+                                value: task
+                            });
+                        });
                         break;
                     }
                 }
@@ -189,7 +232,6 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                     break;
                 }
                 const event = message.value as InputEvent;
-                console.log(event);
                 switch (event.type) {
                     case InputEventType.MouseDown: {
                         isMouseDown = true;
@@ -209,7 +251,6 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                             if (!direction) break;
                             const i = xToi(currentSprite.x);
                             const j = yToj(currentSprite.y);
-                            console.log({i, j, direction});
                             viewFieldOutChannel.put({
                                 topic: CSP.Topic.Swipe,
                                 value: {i, j, direction} as Field.Swipe

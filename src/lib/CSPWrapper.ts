@@ -5,7 +5,8 @@ const enum Topic {
     FieldTask,
     CloseChannel,
     Swipe,
-    InputEvent
+    InputEvent,
+    FieldTaskDone
 }
 
 interface Message {

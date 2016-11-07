@@ -15,10 +15,9 @@
         {
             "name": "Launch localhost with sourcemaps",
             "type": "chrome",
-            "request": "launch",
-            "url": "http://localhost:3000",
+            "request": "attach",
+            "port": 9222,
             "webRoot": "${workspaceRoot}/build/release",
-            "runtimeExecutable": "c:\\Program Files (x86)\\chrome-win32\\chrome.exe",
             "sourceMaps": true
         }
     ]
