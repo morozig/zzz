@@ -19,40 +19,39 @@ const analyse = (image1: ImageData) => {
 };
 
 describe('view', () => {
-    // it('should contain canvas', () => {
-    //     const viewElement = document.getElementById('view');
-    //     const nodeName = viewElement.firstChild.nodeName;
-    //     const actual = nodeName;
-    //     const expected = 'CANVAS';
-    //     expect(actual).to.equal(expected);
-    // });
-    // it('should be 400 X 400', () => {
-    //     const viewElement = document.getElementById('view');
-    //     const canvasElement = viewElement.firstChild as HTMLCanvasElement;
-    //     const size = {
-    //         width: canvasElement.width,
-    //         height: canvasElement.height
-    //     };
-    //     const actual = size;
-    //     const expected = {
-    //         width: 400,
-    //         height: 400
-    //     };
-    //     expect(actual).to.deep.equal(expected);
-    // });
-    // it('should not be black', async () => {
-    //     await timeout(100);
-    //     const viewElement = document.getElementById('view');
-    //     const canvasElement = viewElement.firstChild as HTMLCanvasElement;
-    //     const screenShot = canvasElement
-    //         .getContext("2d")
-    //         .getImageData(0, 0, 400, 400);
+    it('should contain canvas', () => {
+        const viewElement = document.getElementById('view');
+        const nodeName = viewElement.firstChild.nodeName;
+        const actual = nodeName;
+        const expected = 'CANVAS';
+        expect(actual).to.equal(expected);
+    });
+    it('should be 400 X 400', () => {
+        const viewElement = document.getElementById('view');
+        const canvasElement = viewElement.firstChild as HTMLCanvasElement;
+        const size = {
+            width: canvasElement.width,
+            height: canvasElement.height
+        };
+        const actual = size;
+        const expected = {
+            width: 400,
+            height: 400
+        };
+        expect(actual).to.deep.equal(expected);
+    });
+    it('should not be black', async () => {
+        await timeout(100);
+        const viewElement = document.getElementById('view');
+        const canvasElement = viewElement.firstChild as HTMLCanvasElement;
+        const screenShot = canvasElement
+            .getContext("2d")
+            .getImageData(0, 0, 400, 400);
 
-    //     const colours = await analyse(screenShot);
-    //     const isNotBlack = colours.red + colours.green + colours.blue > 0;
-    //     expect(isNotBlack).to.equal(true);
-    // });
-
+        const colours = await analyse(screenShot);
+        const isNotBlack = colours.red + colours.green + colours.blue > 0;
+        expect(isNotBlack).to.equal(true);
+    });
     it('should change over time', async () => {
         await timeout(100);
         const viewElement = document.getElementById('view');
@@ -86,13 +85,6 @@ describe('view', () => {
                 e.ctrlKey, e.altKey, e.shiftKey, e.metaKey,
                 e.button, document.body.parentNode);           
             }
-            // } else if (document.createEventObject) {
-            //     evt = document.createEventObject();
-            //     for (prop in e) {
-            //         evt[prop] = e[prop];
-            //     }
-            //     evt.button = { 0:1, 1:4, 2:2 }[evt.button] || evt.button;
-            // }
             return evt;
         }
         function dispatchEvent (el: any, type: any, evt: any) {
