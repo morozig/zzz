@@ -219,6 +219,11 @@ gulp.task('mocha-browser', (callback) => {
     });
 });
 
+gulp.task('test', gulp.series(
+    'compile',
+    'mocha-node'
+));
+
 gulp.task('default', gulp.series(
     'typings',
     'compile',
@@ -228,11 +233,16 @@ gulp.task('default', gulp.series(
     'mocha-browser'
 ));
 
+gulp.task('rebuild', gulp.series(
+    'compile',
+    'prepare-release'
+));
+
 gulp.task('connect', () => {
     connect.server({
         // port: 3001,
         port: 3000,
-        root: 'build/test/browser'
-        // root: 'build/release'
+        // root: 'build/test/browser'
+        root: 'build/release'
     });
 });

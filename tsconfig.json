@@ -2,7 +2,10 @@
     "compilerOptions": {
         "rootDir": ".",
         "target": "es6",
-        "noImplicitAny": true
+        "noImplicitAny": true,
+        "lib": [
+            "es2016", "dom"
+        ]
     },
     "exclude": [
         "node_modules"

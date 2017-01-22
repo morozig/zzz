@@ -2,6 +2,9 @@ import * as CSP from './CSPWrapper';
 import * as Field from '../../src/lib/Field';
 import * as TWEEN from 'tween.js';
 
+// const TILES_PER_SECOND = 10;
+const TILES_PER_SECOND = 12;
+
 const textures = [
     'assets/images/blue.png',
     'assets/images/brown.png',
@@ -58,8 +61,8 @@ const createEngine = () => {
     const viewElement = document.getElementById('view');
     viewElement.appendChild(renderer.view);
     const stage = new PIXI.Container();
-    const inputChannel = CSP.createChannel();
-    const tilesPerSecond = 10;
+    const inputChannel = CSP.createGenericChannel<InputEvent>();
+    const tilesPerSecond = TILES_PER_SECOND;
 
     const createSprite = (options: SpriteOptions) => {
         const sprite = new PIXI.Sprite(
@@ -75,14 +78,11 @@ const createEngine = () => {
             const type = (event.type === 'mousedown') ? 
                 InputEventType.MouseDown : InputEventType.MouseUp;
             inputChannel.put({
-                topic: CSP.Topic.InputEvent,
-                value: {
-                    sprite: event.target,
-                    type: type,
-                    x: point.x,
-                    y: point.y
-                } as InputEvent
-            });
+                sprite: event.target,
+                type: type,
+                x: point.x,
+                y: point.y
+            } as InputEvent);
         };
         sprite.on('mousedown', eventHandler);
         sprite.on('mouseup', eventHandler);
@@ -129,6 +129,23 @@ const createEngine = () => {
             })
             .onComplete(callback);
     };
+    const destroy = (sprite: Sprite, callback: () => void) => {
+        const pixiSprite = sprite as PIXI.Sprite;
+        const time = 100 / 50 / tilesPerSecond * 1000;
+        const spriteCopy = {
+            alpha: pixiSprite.alpha
+        };
+        new TWEEN.Tween(spriteCopy)
+            .to({alpha: 0}, time)
+            .start()
+            .onUpdate(() => {
+                pixiSprite.alpha = spriteCopy.alpha;
+            })
+            .onComplete(() =>{
+                pixiSprite.destroy();
+                callback();
+            });
+    };
     const fps = document.getElementById('fps');
     setInterval(function(){
         fps.innerHTML = 'Fps: ' + (1000 / averageFrameTime).toFixed();
@@ -137,7 +154,8 @@ const createEngine = () => {
         createSprite,
         start: animate,
         inputChannel,
-        tween
+        tween,
+        destroy
     };
 };
 
@@ -204,7 +222,10 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                     }
                     case Field.TaskAction.Move: {
                         const sprite = zombiz[task.i][task.j];
-                        const to = zombiz[task.to.i][task.to.j];
+                        const to: Point = {
+                            x: iTox(task.to.i),
+                            y: jToy(task.to.j)
+                        }
                         sprite.interactive = false;
                         engine.tween(sprite, to, () => {
                             sprite.interactive = true;
@@ -216,6 +237,16 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                         });
                         break;
                     }
+                    case Field.TaskAction.Destroy: {
+                        const sprite = zombiz[task.i][task.j];
+                        sprite.interactive = false;
+                        engine.destroy(sprite, () => {
+                            viewFieldOutChannel.put({
+                                topic: CSP.Topic.FieldTaskDone,
+                                value: task
+                            });
+                        });
+                    }
                 }
             }
         })();
@@ -226,12 +257,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
             let xDown: number;
             let yDown: number;
             while (true){
-                const message = await engine.inputChannel.take();
-                if (message === CSP.DONE){
-                    viewFieldOutChannel.close();
-                    break;
-                }
-                const event = message.value as InputEvent;
+                const event = await engine.inputChannel.take();
                 switch (event.type) {
                     case InputEventType.MouseDown: {
                         isMouseDown = true;

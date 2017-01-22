@@ -18,7 +18,8 @@
             "request": "attach",
             "port": 9222,
             "webRoot": "${workspaceRoot}/build/release",
-            "sourceMaps": true
+            "sourceMaps": true,
+            "url": "http://localhost:3000/"
         }
     ]
 }

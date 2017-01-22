@@ -111,13 +111,16 @@ describe('view', () => {
         trigger('mousedown', 25, 375);
         await timeout(10);
         trigger('mouseup', 25, 325);
-        await timeout(200);
-        const screenShot2 = canvasElement
-            .getContext("2d")
-            .getImageData(0, 0, 400, 400);
+        let areSame = true;
+        while (areSame){
+            await timeout(100);
+            const screenShot2 = canvasElement
+                .getContext("2d")
+                .getImageData(0, 0, 400, 400);
+            const diff = await compare(screenShot1, screenShot2);
+            areSame = diff.misMatchPercentage === 0;
+        }
 
-        const diff = await compare(screenShot1, screenShot2);
-        const areDifferent = diff.misMatchPercentage > 0;
-        expect(areDifferent).to.equal(true);
+        expect(areSame).to.equal(false);
     });
 });

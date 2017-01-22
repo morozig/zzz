@@ -5,7 +5,6 @@ const enum Topic {
     FieldTask,
     CloseChannel,
     Swipe,
-    InputEvent,
     FieldTaskDone
 }
 
@@ -21,15 +20,22 @@ interface Channel{
     pipe: (...channels: Channel[]) => void;
 }
 
+interface GenericChannel<T>{
+    put: (message: T) => Promise<undefined>;
+    take: () => Promise<T>;
+    close: () => void;
+    pipe: (...channels: GenericChannel<T>[]) => void;
+}
+
 const DONE = {
     topic: Topic.CloseChannel,
     value: VendorChannel.DONE
 } as Message;
 
-const createChannel = () => {
+const createGenericChannel = <T>() => {
     var channel = new VendorChannel();
     return {
-        put(message){
+        put(message: T){
             return channel.put(message);
         },
         take(){
@@ -39,11 +45,13 @@ const createChannel = () => {
             channel.put(DONE);
             return channel.close();
         },
-        pipe(...channels){
+        pipe(...channels: GenericChannel<T>[]){
             return channel.pipe(...channels);
         }
-    } as Channel
+    } as GenericChannel<T>
 };
+
+const createChannel = () => createGenericChannel<Message>() as Channel;
 
 const timeout = (delay: number) => {
     return new Promise((resolve) => {
@@ -53,9 +61,11 @@ const timeout = (delay: number) => {
 
 export {
     createChannel,
+    createGenericChannel,
     Topic,
     DONE,
     Channel,
+    GenericChannel,
     timeout
 };
 
