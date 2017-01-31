@@ -10,6 +10,11 @@ interface Element {
     status: number;
 }
 
+interface Position {
+    i: number;
+    j: number;
+}
+
 interface Difference {
     toFall: number[][];
     toIdle: boolean[][];
@@ -115,7 +120,7 @@ const gravitate = (field: Element[][]) => {
     return {toFall, toIdle, toNull} as Difference;
 };
 
-const generateColours = (size: number) => {
+const generateColours: (size: number) => number[][] = (size: number) => {
     const colours: number[][] = [];
     const elements: Element[][] = [];
     for (let i = 0; i < size; i++){
@@ -135,6 +140,8 @@ const generateColours = (size: number) => {
         }
         groups = find(elements);
     }
+    const hints = hint(elements);
+    if (size > 2 && hints.length === 0) return generateColours(size);
     for (let i = 0; i < size; i++){
         colours[i] = [];
         for (let j = 0; j < size; j++){
@@ -145,6 +152,141 @@ const generateColours = (size: number) => {
     return colours;
 };
 
+const findDoublesInLine = (line: Element[]) => {
+    const doubles: number[][] = [];
+    const equalColours = (a: Element, b: Element) => {
+        if (!a || !b) return false;
+        if (a.status !== Status.Idle || b.status !== Status.Idle) return false;
+        return a.colour === b.colour;
+    };
+    for (let i = 1; i < line.length; i++){
+        if (equalColours(line[i], line[i - 1])){
+            doubles.push([i - 1, i]);
+        } else if (equalColours(line[i], line[i - 2])){
+            doubles.push([i - 2, i]);
+        }
+    }
+    return doubles;
+}
+
+const getHintsAroundDouble = (double: Position[], field: Element[][]) => {
+    const hints: Set<Element> = new Set();
+    const a = double[0];
+    const b = double[1];
+    const colour = field[a.i][a.j].colour;
+    const checkPosition = (position:Position) => {
+        if (!field[position.i] || !field[position.i][position.j]) return false;
+        if (field[position.i][position.j].colour === colour){
+            return true;
+        }
+        return false;
+    };
+    if (a.i === b.i){
+        if (a.j === b.j - 1){
+            if (checkPosition({i: a.i, j: b.j + 2})){
+                hints.add(field[a.i][b.j + 1]);
+                hints.add(field[a.i][b.j + 2]);
+            }
+            if (checkPosition({i: a.i + 1, j: b.j + 1})){
+                hints.add(field[a.i][b.j + 1]);
+                hints.add(field[a.i + 1][b.j + 1]);
+            }
+            if (checkPosition({i: a.i + 1, j: a.j - 1})){
+                hints.add(field[a.i][a.j - 1]);
+                hints.add(field[a.i + 1][a.j - 1]);
+            }
+            if (checkPosition({i: a.i, j: a.j - 2})){
+                hints.add(field[a.i][a.j - 1]);
+                hints.add(field[a.i][a.j - 2]);
+            }
+            if (checkPosition({i: a.i - 1, j: a.j - 1})){
+                hints.add(field[a.i][a.j - 1]);
+                hints.add(field[a.i - 1][a.j - 1]);
+            }
+            if (checkPosition({i: a.i - 1, j: b.j + 1})){
+                hints.add(field[a.i][b.j + 1]);
+                hints.add(field[a.i - 1][b.j + 1]);
+            }
+        } else {
+            if (checkPosition({i: a.i + 1, j: a.j + 1})){
+                hints.add(field[a.i][a.j + 1]);
+                hints.add(field[a.i + 1][a.j + 1]);
+            }
+            if (checkPosition({i: a.i - 1, j: a.j + 1})){
+                hints.add(field[a.i][a.j + 1]);
+                hints.add(field[a.i - 1][a.j + 1]);
+            }
+        }
+    } else {
+        if (a.i === b.i - 1){
+            if (checkPosition({i: b.i + 2, j: a.j})){
+                hints.add(field[b.i + 1][a.j]);
+                hints.add(field[b.i + 2][a.j]);
+            }
+            if (checkPosition({i: b.i + 1, j: a.j + 1})){
+                hints.add(field[b.i + 1][a.j]);
+                hints.add(field[b.i + 1][a.j + 1]);
+            }
+            if (checkPosition({i: a.i - 1, j: a.j + 1})){
+                hints.add(field[a.i - 1][a.j]);
+                hints.add(field[a.i - 1][a.j + 1]);
+            }
+            if (checkPosition({i: a.i - 2, j: a.j})){
+                hints.add(field[a.i - 1][a.j]);
+                hints.add(field[a.i - 2][a.j]);
+            }
+            if (checkPosition({i: a.i - 1, j: a.j - 1})){
+                hints.add(field[a.i - 1][a.j]);
+                hints.add(field[a.i - 1][a.j - 1]);
+            }
+            if (checkPosition({i: b.i + 1, j: a.j - 1})){
+                hints.add(field[b.i + 1][a.j]);
+                hints.add(field[b.i + 1][a.j - 1]);
+            }
+        } else {
+            if (checkPosition({i: a.i + 1, j: a.j + 1})){
+                hints.add(field[a.i + 1][a.j]);
+                hints.add(field[a.i + 1][a.j + 1]);
+            }
+            if (checkPosition({i: a.i + 1, j: a.j - 1})){
+                hints.add(field[a.i + 1][a.j]);
+                hints.add(field[a.i + 1][a.j - 1]);
+            }
+        }
+    }
+    return hints;
+};
+
+const hint = (field: Element[][]) => {
+    const hints: Set<Element> = new Set();
+    let doubles: Position[][] = [];
+    for (let i = 0; i < field.length; i++){
+        const line = field[i];
+        const doublesInLine = findDoublesInLine(line);
+        doubles = doubles.concat(doublesInLine.map(
+            (double) => double.map((j) => {
+                return {i, j}
+            })
+        ));
+    }
+    const height = field[0].length;
+    for (let j = 0; j < height; j++){
+        const line = field.map(colomn => colomn[j]);
+        const doublesInLine = findDoublesInLine(line);
+        doubles = doubles.concat(doublesInLine.map(
+            (double) => double.map((i) => {
+                return {i, j}
+            })
+        ));
+    }
+    for (const double of doubles){
+        for (const hint of getHintsAroundDouble(double, field)){
+            hints.add(hint);
+        }
+    }
+    return [...hints];
+};
+
 export {
     Element,
     Difference,
@@ -152,5 +294,6 @@ export {
     find,
     gravitate,
     generateColours,
-    randomColour
+    randomColour,
+    hint
 }

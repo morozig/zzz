@@ -22,13 +22,13 @@ const startSwipes = async (size: number, swipes: Field.Swipe[]) => {
         });
     }
     fieldInChannel.close();
-    const tasks: Field.Task[] = [];
+    const tasks: Field.FieldTask[] = [];
     while (true){
         const message = await fieldOutChannel.take();
         if (message === CSP.DONE){
             break;
         }
-        const task = message.value as Field.Task;
+        const task = message.value as Field.FieldTask;
         tasks.push(task);
     }
     return tasks;

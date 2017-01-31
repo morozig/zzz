@@ -13,13 +13,14 @@
             "preLaunchTask": "compile"
         },
         {
-            "name": "Launch localhost with sourcemaps",
+            "name": "Attach",
             "type": "chrome",
             "request": "attach",
             "port": 9222,
-            "webRoot": "${workspaceRoot}/build/release",
+            "url": "localhost:3000",
+            "smartStep": true,
             "sourceMaps": true,
-            "url": "http://localhost:3000/"
+            "webRoot": "${workspaceRoot}/build/release"
         }
     ]
 }

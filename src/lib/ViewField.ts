@@ -13,6 +13,7 @@ const textures = [
     'assets/images/red.png',
     'assets/images/white.png',
     'assets/images/yellow.png',
+    'assets/images/electric.png',
     'assets/images/tile.png'
 ];
 
@@ -35,6 +36,7 @@ interface Point {
 
 interface Sprite extends Point{
     interactive: boolean;
+    texture: PIXI.Texture;
 }
 
 interface SpriteOptions {
@@ -146,6 +148,10 @@ const createEngine = () => {
                 callback();
             });
     };
+    const remove = (sprite: Sprite) => {
+        const pixiSprite = sprite as PIXI.Sprite;
+        pixiSprite.destroy();
+    };
     const fps = document.getElementById('fps');
     setInterval(function(){
         fps.innerHTML = 'Fps: ' + (1000 / averageFrameTime).toFixed();
@@ -155,7 +161,8 @@ const createEngine = () => {
         start: animate,
         inputChannel,
         tween,
-        destroy
+        destroy,
+        remove
     };
 };
 
@@ -209,7 +216,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                     viewFieldOutChannel.close();
                     break;
                 }
-                const task = message.value as Field.Task;
+                const task = message.value as Field.FieldTask;
                 switch (task.action) {
                     case Field.TaskAction.CreateZombi: {
                         const sprite = engine.createSprite({
@@ -246,6 +253,11 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                                 value: task
                             });
                         });
+                    }
+                    case Field.TaskAction.Remove: {
+                        const sprite = zombiz[task.i][task.j];
+                        sprite.interactive = false;
+                        engine.remove(sprite);
                     }
                 }
             }

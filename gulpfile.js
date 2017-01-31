@@ -63,6 +63,9 @@ gulp.task('es6 -> es5', () => {
             plugins: ['transform-runtime']
         }))
         .pipe(sourcemaps.write('.', {
+            mapSources: function(sourcePath) {
+                return sourcePath;
+            },
             sourceRoot: '..'
         }))
         .pipe(gulp.dest('build'));

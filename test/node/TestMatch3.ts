@@ -17,6 +17,12 @@ function equalGroups(a: {}[][], b: {}[][]) {
     return true;
 }
 
+function equalArrays(a: {}[], b: {}[]) {
+    if (a.length !== b.length) return false;
+    return (a.every((element) => b.includes(element))) &&
+        (b.every((element) => a.includes(element)));
+}
+
 const fromMatrix = (example: number[][]) => {
     const width = example[0].length;
     const begin = new Array(width).fill([]);
@@ -347,6 +353,124 @@ describe ('Match3', () => {
                 height: 8
             };
             expect(actual).to.deep.equal(expected);
+        });
+        it('should contain hints', () => {
+            const elements = create(8);
+            const hints = Match3.hint(elements);
+            const areHintsFound = hints.length > 0;
+            expect(areHintsFound).to.be.true;
+        });
+    });
+    describe('.hints()', () => {
+        it('should work on example 1', () => {
+            const elements = fromMatrix([
+                [0],
+                [0],
+                [0]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 2', () => {
+            const elements = fromMatrix([
+                [0, 1],
+                [1, 2],
+                [0, 1]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[0][1], elements[1][1]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 3', () => {
+            const elements = fromMatrix([
+                [0, 1],
+                [1, 0],
+                [0, 1]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[0][1], elements[1][1]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 4', () => {
+            const elements = fromMatrix([
+                [0, 1],
+                [2, 0],
+                [0, 1]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[0][1], elements[1][1]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 5', () => {
+            const elements = fromMatrix([
+                [1, 0],
+                [0, 1],
+                [0, 2]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[0][2], elements[1][2]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 6', () => {
+            const elements = fromMatrix([
+                [1, 0, 0],
+                [0, 1, 2]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[0][0], elements[0][1]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 7', () => {
+            const elements = fromMatrix([
+                [1, 0, 1],
+                [0, 1, 0]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [elements[1][0], elements[1][1]];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 8', () => {
+            const elements = fromMatrix([
+                [1, 0, 1, 2, 2],
+                [0, 0, 1, 3, 2],
+                [1, 2, 2, 3, 1],
+                [3, 2, 2, 0, 4],
+                [0, 0, 1, 1, 2]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
+        });
+        it('should work on example 9', () => {
+            const elements = fromMatrix([
+                [1, 0, 1, 2, 2],
+                [0, 0, 1, 3, 2],
+                [1, 2, 0, 3, 1],
+                [3, 2, 1, 0, 1],
+                [0, 0, 1, 1, 2]
+            ]);
+            const actual = Match3.hint(elements);
+            const expected:{}[] = [
+                    elements[2][2],
+                    elements[2][3],
+                    elements[1][2],
+                    elements[2][1],
+                    elements[3][0],
+                    elements[3][1],
+                    elements[4][1],
+                    elements[4][0]
+            ];
+            const areEqual = equalArrays(actual, expected);
+            expect(areEqual).to.be.true;
         });
     });
 });
