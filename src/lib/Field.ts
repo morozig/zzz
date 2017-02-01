@@ -293,10 +293,18 @@ const update = (
                     const areAllIdle = zombiz.every((colomn) => colomn.every(
                         (zombi) => zombi && zombi.status === Match3.Status.Idle
                     ));
-                    if (areAllIdle){
+                    if (areAllIdle && zombiz.length > 2){
                         const hints = Match3.hint(zombiz);
                         if (hints.length === 0){
-                            setElectricBomb(fieldOutChannel, zombiz);
+                            const noElectricBombs = zombiz.every(
+                                (colomn) => colomn.every(
+                                    (zombi) => !zombi.bomb
+                                        || zombi.bomb.type !== BombType.Electric
+                                )
+                            );
+                            if (noElectricBombs){
+                                setElectricBomb(fieldOutChannel, zombiz);
+                            }
                         }
                     }
                     break;
