@@ -36,7 +36,6 @@ interface Point {
 
 interface Sprite extends Point{
     interactive: boolean;
-    texture: PIXI.Texture;
 }
 
 interface SpriteOptions {
@@ -253,11 +252,13 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                                 value: task
                             });
                         });
+                        break;
                     }
                     case Field.TaskAction.Remove: {
                         const sprite = zombiz[task.i][task.j];
                         sprite.interactive = false;
                         engine.remove(sprite);
+                        break;
                     }
                 }
             }

@@ -87,6 +87,8 @@ const setElectricBomb = (
     const size = zombiz.length;
     const i = Math.floor(Math.random() * size);
     const j = Math.floor(Math.random() * size);
+    const oldZombi = zombiz[i][j];
+    if (!oldZombi || oldZombi.status !== Match3.Status.Idle) return;
     const task: FieldTask = {
         i,
         j,
@@ -289,7 +291,7 @@ const update = (
                         killTaskChannel.put(killTask);
                     }
                     const areAllIdle = zombiz.every((colomn) => colomn.every(
-                        (zombi) => zombi.status === Match3.Status.Idle
+                        (zombi) => zombi && zombi.status === Match3.Status.Idle
                     ));
                     if (areAllIdle){
                         const hints = Match3.hint(zombiz);
@@ -364,6 +366,7 @@ const update = (
 const kill = (
         newCompositeTaskChannel: CSP.GenericChannel<CompositeTask>,
         killTaskChannel: CSP.GenericChannel<KillTask>,
+        fieldOutChannel: CSP.Channel,
         zombiz: Zombi[][]
     ) => {
     (async () => {
@@ -424,8 +427,9 @@ const kill = (
                         const zombizOfColour = [zombi];
                         for (const coloumn of zombiz){
                             for (const zombi of coloumn){
-                                if (zombi.colour === colour 
-                                    && zombi.status === Match3.Status.Idle){
+                                if (zombi 
+                                    && zombi.status === Match3.Status.Idle
+                                    && zombi.colour === colour){
                                     zombizOfColour.push(zombi);
                                 }
                             }
@@ -444,7 +448,7 @@ const kill = (
                             fieldTasks: fieldTasks,
                             status: Match3.Status.Dead
                         }
-                        newCompositeTaskChannel.put(compositeTask);
+                        newCompositeTaskChannel.put(compositeTask);                                       
                     }
                 }
             }
@@ -475,7 +479,7 @@ const pipe = (fieldInChannel: CSP.Channel) => {
         fieldOutChannel,
         zombiz
     );
-    kill(newCompositeTaskChannel, killTaskChannel, zombiz);
+    kill(newCompositeTaskChannel, killTaskChannel, fieldOutChannel, zombiz);
     (async () => {
         while (true){
             const message = await fieldInChannel.take();
