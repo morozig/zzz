@@ -20,7 +20,10 @@ const enum Colour {
 }
 
 const enum BombType {
-    Electric
+    Grenade,
+    Electric,
+    Saw,
+    Nuclear
 }
 
 interface Position {
@@ -32,6 +35,7 @@ interface FieldTask extends Position {
     action: TaskAction;
     colour?: number;
     to?: Position;
+    bombType?: BombType;
 }
 
 interface CompositeTask {
@@ -56,22 +60,26 @@ interface Zombi extends Position{
 
 interface KillTask {
     groups: Zombi[][];
-    bombs: Zombi[];
 }
 
 const createZombi = (
         i: number,
         j: number,
         colour: Colour,
-        fieldOutChannel: CSP.Channel
+        fieldOutChannel: CSP.Channel,
+        bombType?: BombType
     ) => {
     const status = Match3.Status.Busy;
     const zombi: Zombi = {i, j, colour, status};
+    if (bombType !== undefined){
+        zombi.bomb = {type: bombType};
+    }
     const task: FieldTask = {
         i,
         j,
         colour,
-        action: TaskAction.CreateZombi
+        action: TaskAction.CreateZombi,
+        bombType
     };
     fieldOutChannel.put({
         topic: CSP.Topic.FieldTask,
@@ -227,15 +235,19 @@ const pool = (
                 case Match3.Status.Dead: {
                     for(const task of doneCompositeTask.fieldTasks){
                         const zombi = zombiz[task.i][task.j];
+                        if (!zombi) break;
                         if (zombi.bomb && zombi.bomb.create){
+                            const bombType = zombi.bomb.type;
+                            const colour = bombType === BombType.Electric ? 
+                                Colour.Chameleon : zombi.colour;
                             const newBomb = createZombi(
                                 task.i,
                                 task.j,
-                                Colour.Chameleon,
-                                fieldOutChannel
+                                colour,
+                                fieldOutChannel,
+                                bombType
                             );
                             newBomb.status = Match3.Status.Falling;
-                            newBomb.bomb = {type: BombType.Electric};
                             zombiz[task.i][task.j] = newBomb;
                             feed.put(Match3.Status.Falling);
                         } else zombi.status = Match3.Status.Dead;
@@ -254,6 +266,7 @@ const pool = (
                 case Match3.Status.Falling: {
                     for(const task of doneCompositeTask.fieldTasks){
                         const zombi = zombiz[task.to.i][task.to.j];
+                        if (!zombi) break;
                         zombi.status = Match3.Status.Falling;
                     }
                     feed.put(Match3.Status.Falling);
@@ -285,8 +298,7 @@ const update = (
                             zombi.status = Match3.Status.Busy;
                         }
                         const killTask: KillTask = {
-                            groups: groups as Zombi[][],
-                            bombs: []
+                            groups: groups as Zombi[][]
                         };
                         killTaskChannel.put(killTask);
                     }
@@ -374,6 +386,7 @@ const update = (
 const kill = (
         newCompositeTaskChannel: CSP.GenericChannel<CompositeTask>,
         killTaskChannel: CSP.GenericChannel<KillTask>,
+        bombChannel: CSP.GenericChannel<Zombi>,
         fieldOutChannel: CSP.Channel,
         zombiz: Zombi[][]
     ) => {
@@ -381,13 +394,13 @@ const kill = (
         while (true){
             const killTask = await killTaskChannel.take();
             const groups = killTask.groups;
-            const bombs = killTask.bombs;
             if (groups.length > 0){
                 const zombizInGroups: Zombi[] = [];
                 for (const group of groups){
                     let longestLine: Zombi[] = [];
                     const verticalLines: Zombi[][] = [];
                     const horizontalLines: Zombi[][] = [];
+                    let newBomb: Zombi;
                     for (const zombi of group){
                         zombizInGroups.push(zombi);
                         verticalLines[zombi.i] = verticalLines[zombi.i] || [];
@@ -404,23 +417,55 @@ const kill = (
                             longestLine = horizontalLine;
                         }
                     }
-                    if (longestLine.length >= 5){
-                        const newBomb = longestLine[2];
-                        newBomb.bomb = {
-                            type: BombType.Electric,
-                            create: true
-                        };
+                    const otherZombi = group.find((zombi) => 
+                        !longestLine.includes(zombi)
+                    );
+                    if (otherZombi){
+                        newBomb = longestLine.find((zombi) => 
+                            zombi.i === otherZombi.i ||
+                            zombi.j === otherZombi.j
+                        );
+                        newBomb = newBomb || longestLine[0];
+                        if (longestLine.length >= 4){
+                            newBomb.bomb = {
+                                type: BombType.Nuclear,
+                                create: true
+                            };
+                        } else {
+                            newBomb.bomb = {
+                                type: BombType.Saw,
+                                create: true
+                            };
+                        }
+                    } else {
+                        if (longestLine.length >= 5){
+                            newBomb = longestLine[2];
+                            newBomb.bomb = {
+                                type: BombType.Electric,
+                                create: true
+                            };
+                        } else if (longestLine.length === 4){
+                            newBomb = longestLine[1];
+                            newBomb.bomb = {
+                                type: BombType.Grenade,
+                                create: true
+                            };
+                        }
                     }
                 }
                 const fieldTasks = [] as FieldTask[];
                 for (const zombi of zombizInGroups){
                     zombi.status = Match3.Status.Busy;
-                    const fieldTask: FieldTask = {
-                        i: zombi.i,
-                        j: zombi.j,
-                        action: TaskAction.Destroy
-                    };
-                    fieldTasks.push(fieldTask);
+                    if (zombi.bomb && !zombi.bomb.create){
+                        bombChannel.put(zombi);
+                    } else {
+                        const fieldTask: FieldTask = {
+                            i: zombi.i,
+                            j: zombi.j,
+                            action: TaskAction.Destroy
+                        };
+                        fieldTasks.push(fieldTask);
+                    }
                 }
                 const compositeTask = {
                     fieldTasks: fieldTasks,
@@ -428,38 +473,101 @@ const kill = (
                 }
                 newCompositeTaskChannel.put(compositeTask);
             }
-            if (bombs.length > 0){
-                for (const zombi of bombs){
-                    if (zombi.bomb.type === BombType.Electric){
-                        const colour = zombi.colour;
-                        const zombizOfColour = [zombi];
-                        for (const coloumn of zombiz){
-                            for (const zombi of coloumn){
-                                if (zombi 
-                                    && zombi.status === Match3.Status.Idle
-                                    && zombi.colour === colour){
-                                    zombizOfColour.push(zombi);
-                                }
+        }
+    })();
+    (async () => {
+        while (true){
+            const bomb = await bombChannel.take();
+            if (!bomb || !bomb.bomb) continue;
+            const toShoot: Set<Zombi> = new Set([bomb]);
+            switch (bomb.bomb.type){
+                case BombType.Electric: {
+                    const colour = (bomb.colour !== Colour.Chameleon) ?
+                        bomb.colour : Match3.randomColour(zombiz.length);
+                    for (const coloumn of zombiz){
+                        for (const zombi of coloumn){
+                            if (zombi 
+                                && zombi.status === Match3.Status.Idle
+                                && zombi.colour === colour){
+                                toShoot.add(zombi);
                             }
                         }
-                        const fieldTasks = [] as FieldTask[];
-                        for (const zombi of zombizOfColour){
-                            zombi.status = Match3.Status.Busy;
-                            const fieldTask: FieldTask = {
-                                i: zombi.i,
-                                j: zombi.j,
-                                action: TaskAction.Destroy
-                            };
-                            fieldTasks.push(fieldTask);
-                        }
-                        const compositeTask = {
-                            fieldTasks: fieldTasks,
-                            status: Match3.Status.Dead
-                        }
-                        newCompositeTaskChannel.put(compositeTask);                                       
                     }
+                    break;
+                }
+                case BombType.Grenade: {
+                    for (let i = -1; i <= 1; i++){
+                        for (let j = -1; j <= 1; j++){
+                            if (!zombiz[bomb.i + i]) continue;
+                            const zombi = zombiz[bomb.i + i][bomb.j + j];
+                            if (zombi && zombi.status == Match3.Status.Idle){
+                                toShoot.add(zombi);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case BombType.Saw:{
+                    const size = zombiz.length;
+                    for (let i = 0; i <= size; i++){
+                        if (!zombiz[i]) continue;
+                        const zombi = zombiz[i][bomb.j];
+                        if (zombi && zombi.status == Match3.Status.Idle){
+                            toShoot.add(zombi);
+                        }
+                    }
+                    for (let j = 0; j <= size; j++){
+                        if (!zombiz[bomb.i]) continue;
+                        const zombi = zombiz[bomb.i][j];
+                        if (zombi && zombi.status == Match3.Status.Idle){
+                            toShoot.add(zombi);
+                        }
+                    }
+                    break;
+                }
+                case BombType.Nuclear: {
+                    const size = zombiz.length;
+                    for (let i = -1; i <= 1; i++){
+                        if (!zombiz[bomb.i + i]) continue;
+                        for (let j = 0; j <= size; j++){
+                            const zombi = zombiz[bomb.i + i][j];
+                            if (zombi && zombi.status == Match3.Status.Idle){
+                                toShoot.add(zombi);
+                            }
+                        }
+                    }
+                    for (let j = -1; j <= 1; j++){
+                        for (let i = 0; i <= size; i++){
+                            if (!zombiz[i]) continue;
+                            const zombi = zombiz[i][bomb.j + j];
+                            if (zombi && zombi.status == Match3.Status.Idle){
+                                toShoot.add(zombi);
+                            }
+                        }
+                    }
+                    break;
                 }
             }
+            const fieldTasks = [] as FieldTask[];
+            for (const zombi of toShoot){
+                if (!zombi) continue;
+                zombi.status = Match3.Status.Busy;
+                if (zombi.bomb && zombi !== bomb){
+                    bombChannel.put(zombi);
+                } else {
+                    const fieldTask: FieldTask = {
+                        i: zombi.i,
+                        j: zombi.j,
+                        action: TaskAction.Destroy
+                    };
+                    fieldTasks.push(fieldTask);
+                }
+            }
+            const compositeTask = {
+                fieldTasks: fieldTasks,
+                status: Match3.Status.Dead
+            }
+            newCompositeTaskChannel.put(compositeTask);
         }
     })();
 };
@@ -470,6 +578,7 @@ const pipe = (fieldInChannel: CSP.Channel) => {
     const doneTaskChannel = CSP.createGenericChannel<FieldTask>();
     const doneCompositeTaskChannel = CSP.createGenericChannel<CompositeTask>();
     const killTaskChannel = CSP.createGenericChannel<KillTask>();
+    const bombChannel = CSP.createGenericChannel<Zombi>();
     const feed = CSP.createGenericChannel<Match3.Status>();
     let size = 0;
     const zombiz: Zombi[][] = [];
@@ -487,7 +596,12 @@ const pipe = (fieldInChannel: CSP.Channel) => {
         fieldOutChannel,
         zombiz
     );
-    kill(newCompositeTaskChannel, killTaskChannel, fieldOutChannel, zombiz);
+    kill(newCompositeTaskChannel,
+        killTaskChannel,
+        bombChannel,
+        fieldOutChannel,
+        zombiz
+    );
     (async () => {
         while (true){
             const message = await fieldInChannel.take();
@@ -504,7 +618,8 @@ const pipe = (fieldInChannel: CSP.Channel) => {
                 case CSP.Topic.Swipe: {
                     const swipe: Swipe = message.value;
                     const zombi = zombiz[swipe.i][swipe.j];
-                    if (zombi.bomb){
+                    if (!zombi) break;
+                    if (zombi.bomb && zombi.bomb.type === BombType.Electric){
                         if (zombi.status != Match3.Status.Idle) break;
                         const iTo = zombi.i + swipe.direction.i;
                         const jTo = zombi.j + swipe.direction.j;
@@ -514,11 +629,7 @@ const pipe = (fieldInChannel: CSP.Channel) => {
                             zombiTo.status != Match3.Status.Idle) break;
                         zombi.status = Match3.Status.Busy;
                         zombi.colour = zombiTo.colour;
-                        const killTask: KillTask = {
-                            bombs: [zombi],
-                            groups: []
-                        };
-                        killTaskChannel.put(killTask);
+                        bombChannel.put(zombi);
                     } else {
                         swap(newCompositeTaskChannel, message.value, zombiz);
                     }
@@ -540,5 +651,6 @@ export {
     TaskAction,
     FieldTask,
     Swipe,
-    Zombi
+    Zombi,
+    BombType
 };

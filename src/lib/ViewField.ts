@@ -2,7 +2,6 @@ import * as CSP from './CSPWrapper';
 import * as Field from '../../src/lib/Field';
 import * as TWEEN from 'tween.js';
 
-// const TILES_PER_SECOND = 10;
 const TILES_PER_SECOND = 12;
 
 const textures = [
@@ -14,7 +13,28 @@ const textures = [
     'assets/images/white.png',
     'assets/images/yellow.png',
     'assets/images/electric.png',
-    'assets/images/tile.png'
+    'assets/images/tile.png',
+    'assets/images/Grenade_Blue.png',
+    'assets/images/Grenade_Brown.png',
+    'assets/images/Grenade_Green.png',
+    'assets/images/Grenade_Grey.png',
+    'assets/images/Grenade_Red.png',
+    'assets/images/Grenade_White.png',
+    'assets/images/Grenade_Yellow.png',
+    'assets/images/Saw_Blue.png',
+    'assets/images/Saw_Brown.png',
+    'assets/images/Saw_Green.png',
+    'assets/images/Saw_Grey.png',
+    'assets/images/Saw_Red.png',
+    'assets/images/Saw_White.png',
+    'assets/images/Saw_Yellow.png',
+    'assets/images/Nuclear_Blue.png',
+    'assets/images/Nuclear_Brown.png',
+    'assets/images/Nuclear_Green.png',
+    'assets/images/Nuclear_Grey.png',
+    'assets/images/Nuclear_Red.png',
+    'assets/images/Nuclear_White.png',
+    'assets/images/Nuclear_Yellow.png'
 ];
 
 const loadDOM = () => {
@@ -218,8 +238,25 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                 const task = message.value as Field.FieldTask;
                 switch (task.action) {
                     case Field.TaskAction.CreateZombi: {
+                        let textureOffset = 0;
+                        switch (task.bombType){
+                            case undefined:
+                                break;
+                            case Field.BombType.Grenade: {
+                                textureOffset = 9;
+                                break;
+                            }
+                            case Field.BombType.Saw: {
+                                textureOffset = 16;
+                                break;
+                            }
+                            case Field.BombType.Nuclear: {
+                                textureOffset = 23;
+                                break;
+                            }
+                        }
                         const sprite = engine.createSprite({
-                            texture: textures[task.colour],
+                            texture: textures[textureOffset + task.colour],
                             x: iTox(task.i),
                             y: jToy(task.j)
                         });
