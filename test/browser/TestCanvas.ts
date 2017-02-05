@@ -41,16 +41,18 @@ describe('view', () => {
         expect(actual).to.deep.equal(expected);
     });
     it('should not be black', async () => {
-        await timeout(100);
         const viewElement = document.getElementById('view');
         const canvasElement = viewElement.firstChild as HTMLCanvasElement;
-        const screenShot = canvasElement
-            .getContext("2d")
-            .getImageData(0, 0, 400, 400);
-
-        const colours = await analyse(screenShot);
-        const isNotBlack = colours.red + colours.green + colours.blue > 0;
-        expect(isNotBlack).to.equal(true);
+        let isBlack = true;
+        while (isBlack){
+            await timeout(50);
+            const screenShot = canvasElement
+                .getContext("2d")
+                .getImageData(0, 0, 400, 400);
+            const colours = await analyse(screenShot);
+            isBlack = colours.red + colours.green + colours.blue === 0;
+        }
+        expect(isBlack).to.equal(false);
     });
     it('should change over time', async () => {
         await timeout(100);
