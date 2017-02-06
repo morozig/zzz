@@ -239,18 +239,18 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                 switch (task.action) {
                     case Field.TaskAction.CreateZombi: {
                         let textureOffset = 0;
-                        switch (task.bombType){
+                        switch (task.zombiType){
                             case undefined:
                                 break;
-                            case Field.BombType.Grenade: {
+                            case Field.ZombiType.Grenade: {
                                 textureOffset = 9;
                                 break;
                             }
-                            case Field.BombType.Saw: {
+                            case Field.ZombiType.Saw: {
                                 textureOffset = 16;
                                 break;
                             }
-                            case Field.BombType.Nuclear: {
+                            case Field.ZombiType.Nuclear: {
                                 textureOffset = 23;
                                 break;
                             }
