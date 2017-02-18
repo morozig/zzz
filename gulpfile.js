@@ -1,11 +1,8 @@
 const gulp = require('gulp');
-const browserify = require('browserify');
-const source = require('vinyl-source-stream');
 const ts = require('gulp-typescript');
 const mocha = require('gulp-mocha');
 const connect = require('gulp-connect');
 const path = require('path');
-const glob = require('glob');
 const del = require('del');
 const fs = require('fs');
 const phantomjs = require('phantomjs-prebuilt');
@@ -14,11 +11,12 @@ const os = require('os');
 const sourcemaps = require('gulp-sourcemaps');
 const spawn = require('child_process').spawn;
 const jsdom = require('jsdom');
-const gulpTypings = require('gulp-typings');
-const buffer = require('vinyl-buffer');
-const tsify = require("tsify");
 const nodeJquery = require("jquery");
 const html = require('html');
+const gulpWebpack = require('webpack-stream');
+const webpackConfig = require('./webpack.config.js');
+const webpack = require('webpack');
+const glob = require('glob');
 
 const paths = {
     pages: ['src/*.html'],
@@ -32,11 +30,6 @@ const paths = {
 };
 
 const tsProject = ts.createProject('tsconfig.json');
-
-gulp.task('typings', () => {
-    return gulp.src("./typings.json")
-        .pipe(gulpTypings()); 
-});
 
 gulp.task('clean', () => {
     return del(['build']);
@@ -92,27 +85,10 @@ gulp.task('copy-vendor-release', () => {
         .pipe(gulp.dest('build/release/vendor'));
 });
 
-gulp.task('browserify-app', () => {
-    return browserify({
-        basedir: '.',
-        debug: true,
-        entries: ['src/main.ts'],
-        cache: {},
-        packageCache: {}
-    })
-        .plugin(tsify)
-        .transform('babelify', {
-            presets: ['es2015'],
-            extensions: ['.ts'],
-            plugins: ['transform-runtime']
-        })
-        .bundle()
-        .pipe(source('bundle.js'))
-        // .pipe(buffer())
-        // .pipe(sourcemaps.init({loadMaps: true}))
-        // .pipe(sourcemaps.write('./', {
-        //     sourceRoot: '../..'
-        // }))
+gulp.task('webpack-app', () => {
+    webpackConfig.module.rules[0].include = path.resolve(__dirname, "src");
+    return gulp.src('src/main.ts')
+        .pipe(gulpWebpack(webpackConfig, webpack))
         .pipe(gulp.dest('build/release'));
 });
 
@@ -120,27 +96,19 @@ gulp.task('prepare-release', gulp.series(
     'copy-html-release',
     'copy-assets-release',
     'copy-vendor-release',
-    'browserify-app'
+    'webpack-app'
 ));
 
-gulp.task('browserify-tests', () => {
-    const testFiles = glob.sync('test/browser/Test*.ts');
-    return browserify({
-        basedir: '.',
-        debug: true,
-        entries: testFiles,
-        cache: {},
-        packageCache: {}
-    })
-    .plugin(tsify)
-    .transform('babelify', {
-        presets: ['es2015'],
-        extensions: ['.ts'],
-        plugins: ['transform-runtime']
-    })
-    .bundle()
-    .pipe(source('all-tests.js'))
-    .pipe(gulp.dest('build/test/browser'));
+gulp.task('webpack-tests', () => {
+    webpackConfig.module.rules[0].include = [
+        path.resolve(__dirname, "test"),
+        path.resolve(__dirname, "src")
+    ];
+    webpackConfig.entry = glob.sync('./test/browser/Test*.ts');
+    webpackConfig.output.filename = 'all-tests.js';
+    return gulp.src('src/main.ts')
+        .pipe(gulpWebpack(webpackConfig, webpack))
+        .pipe(gulp.dest('build/test/browser'));
 });
 
 gulp.task('copy-test-files', () => {
@@ -183,7 +151,7 @@ gulp.task('inject-mocha', (callback) => {
 });
 
 gulp.task('prepare-browser-tests', gulp.series(
-    'browserify-tests',
+    'webpack-tests',
     'copy-test-files',
     'copy-test-libs',
     'inject-mocha'
@@ -228,7 +196,6 @@ gulp.task('test', gulp.series(
 ));
 
 gulp.task('default', gulp.series(
-    'typings',
     'compile',
     'mocha-node',
     'prepare-release',

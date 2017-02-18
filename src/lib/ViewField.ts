@@ -1,6 +1,7 @@
 import * as CSP from './CSPWrapper';
 import * as Field from '../../src/lib/Field';
-import * as TWEEN from 'tween.js';
+import TWEEN from 'tween.js';
+import PIXI from 'pixi.js';
 
 const TILES_PER_SECOND = 12;
 
@@ -172,8 +173,12 @@ const createEngine = () => {
         pixiSprite.destroy();
     };
     const fps = document.getElementById('fps');
+    const scoreElement = document.getElementById('score');
+    const setScore = (score: Number) => {
+        scoreElement.innerHTML = '' + score;
+    };
     setInterval(function(){
-        fps.innerHTML = 'Fps: ' + (1000 / averageFrameTime).toFixed();
+        fps.innerHTML = '' + (1000 / averageFrameTime).toFixed();
     }, 100);
     return {
         createSprite,
@@ -181,7 +186,8 @@ const createEngine = () => {
         inputChannel,
         tween,
         destroy,
-        remove
+        remove,
+        setScore
     };
 };
 
@@ -228,12 +234,18 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
 
         const zombiz: Sprite[][] = [];
         for (let i = 0; i < GAME_SIZE; i++) zombiz[i] = [];
+        let points = 0;
         (async () => {
             while (true){
                 const message = await viewFieldInChannel.take();
                 if (message === CSP.DONE){
                     viewFieldOutChannel.close();
                     break;
+                }
+                if (message.topic === CSP.Topic.NewPoints){
+                    points += message.value;
+                    engine.setScore(points);
+                    continue;
                 }
                 const task = message.value as Field.FieldTask;
                 switch (task.action) {

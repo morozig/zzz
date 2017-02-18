@@ -263,6 +263,11 @@ const pool = (
                         } else zombi.status = Match3.Status.Dead;
                     }
                     feed.put(Match3.Status.Dead);
+                    const count = doneCompositeTask.fieldTasks.length;
+                    fieldOutChannel.put({
+                        topic: CSP.Topic.NewPoints,
+                        value: count
+                    })
                     break;
                 }
                 case Match3.Status.Idle: {

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { timeout } from '../../src/lib/CSPWrapper';
-import * as resemble from 'resemblejs';
+import resemble from 'resemblejs';
 
 const compare = (image1: ImageData, image2: ImageData) => {
     return new Promise<any>(resolve => {

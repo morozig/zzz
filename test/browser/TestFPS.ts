@@ -9,7 +9,7 @@ describe('fps', () => {
         for (let i = 0; i < 3; i++){
             await timeout(50);
             let text = elt.text();
-            let value = parseInt(text.match(/Fps: (\d+)/)[1]);
+            let value = parseInt(text);
             values.push(value);
         }
         const actual = values.every(fps => fps > 0 && fps < 100);
