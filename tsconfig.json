@@ -6,7 +6,9 @@
         "lib": [
             "es2016", "dom"
         ],
-        "allowSyntheticDefaultImports": true
+        "allowSyntheticDefaultImports": true,
+        "jsx": "react",
+        "experimentalDecorators": true
     },
     "exclude": [
         "node_modules"

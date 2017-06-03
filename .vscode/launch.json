@@ -2,15 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
             "type": "node",
             "request": "launch",
+            "name": "Launch Program",
             "program": "${file}",
-            "cwd": "${workspaceRoot}",
-            "console": "internalConsole",
+            "preLaunchTask": "compile",
             "sourceMaps": true,
-            "outFiles": ["${workspaceRoot}/build/**/*.js"],
-            "preLaunchTask": "compile"
+            "outFiles": [
+                "${workspaceRoot}/build/test/node/Test*"
+            ]
         },
         {
             "name": "Attach",
@@ -20,7 +20,12 @@
             "url": "localhost:3000",
             "smartStep": true,
             "sourceMaps": true,
-            "webRoot": "${workspaceRoot}/build/release"
+            "webRoot": "${workspaceRoot}/build/release",
+            "sourceMapPathOverrides": {
+                "webpack:///./*":   "${workspaceRoot}/*",                   
+                "webpack:///./~/*": "${workspaceRoot}/node_modules/*",
+                "webpack:///*":     "*"
+            }
         }
     ]
 }

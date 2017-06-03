@@ -20,14 +20,14 @@ const analyse = (image1: ImageData) => {
 
 describe('view', () => {
     it('should contain canvas', () => {
-        const viewElement = document.getElementById('view');
+        const viewElement = document.getElementById('field');
         const nodeName = viewElement.firstChild.nodeName;
         const actual = nodeName;
         const expected = 'CANVAS';
         expect(actual).to.equal(expected);
     });
     it('should be 400 X 400', () => {
-        const viewElement = document.getElementById('view');
+        const viewElement = document.getElementById('field');
         const canvasElement = viewElement.firstChild as HTMLCanvasElement;
         const size = {
             width: canvasElement.width,

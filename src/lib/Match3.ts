@@ -1,3 +1,5 @@
+const MAX_COLORS = 7;
+
 const enum Status {
     Idle,
     Busy,
@@ -6,7 +8,7 @@ const enum Status {
 }
 
 interface Element {
-    colour: number;
+    color: number;
     status: number;
 }
 
@@ -32,8 +34,8 @@ const findGroupsInLine = (line: Element[]) => {
     };
     for (const element of line){
         if (element && element.status == Status.Idle){
-            const groupColour = !group[0] || group[0].colour;
-            if (element.colour !== groupColour) flush();
+            const groupColor = !group[0] || group[0].color;
+            if (element.color !== groupColor) flush();
             group.push(element);
         } else flush();
     }
@@ -75,10 +77,10 @@ const find = (field: Element[][]) => {
     return groups;
 };
 
-const randomColour = (size: number) => {
-    const maxColours = 7;
-    const differentColours = Math.min(size - 1, maxColours);
-    return Math.floor(Math.random() * differentColours);
+const randomColor = (size: number) => {
+    const maxColors = MAX_COLORS;
+    const differentColors = Math.min(size - 1, maxColors);
+    return Math.floor(Math.random() * differentColors);
 };
 
 const gravitate = (field: Element[][]) => {
@@ -120,49 +122,49 @@ const gravitate = (field: Element[][]) => {
     return {toFall, toIdle, toNull} as Difference;
 };
 
-const generateColours: (size: number) => number[][] = (size: number) => {
-    const colours: number[][] = [];
+const generateColors: (size: number) => number[][] = (size: number) => {
+    const colors: number[][] = [];
     const elements: Element[][] = [];
     for (let i = 0; i < size; i++){
         elements[i] = [];
         for (let j = 0; j < size; j++){
-            const colour = randomColour(size);
+            const color = randomColor(size);
             const status = Status.Idle;
-            elements[i][j] = {colour, status};
+            elements[i][j] = {color, status};
         }
     }
     let groups = find(elements);
     while(groups.length > 0){
         for(const group of groups){
             for(const element of group){
-                element.colour = randomColour(size);
+                element.color = randomColor(size);
             }
         }
         groups = find(elements);
     }
     const hints = hint(elements);
-    if (size > 2 && hints.length === 0) return generateColours(size);
+    if (size > 2 && hints.length === 0) return generateColors(size);
     for (let i = 0; i < size; i++){
-        colours[i] = [];
+        colors[i] = [];
         for (let j = 0; j < size; j++){
-            const colour = elements[i][j].colour;
-            colours[i][j] = colour;
+            const color = elements[i][j].color;
+            colors[i][j] = color;
         }
     }
-    return colours;
+    return colors;
 };
 
 const findDoublesInLine = (line: Element[]) => {
     const doubles: number[][] = [];
-    const equalColours = (a: Element, b: Element) => {
+    const equalColors = (a: Element, b: Element) => {
         if (!a || !b) return false;
         if (a.status !== Status.Idle || b.status !== Status.Idle) return false;
-        return a.colour === b.colour;
+        return a.color === b.color;
     };
     for (let i = 1; i < line.length; i++){
-        if (equalColours(line[i], line[i - 1])){
+        if (equalColors(line[i], line[i - 1])){
             doubles.push([i - 1, i]);
-        } else if (equalColours(line[i], line[i - 2])){
+        } else if (equalColors(line[i], line[i - 2])){
             doubles.push([i - 2, i]);
         }
     }
@@ -173,10 +175,10 @@ const getHintsAroundDouble = (double: Position[], field: Element[][]) => {
     const hints: Set<Element> = new Set();
     const a = double[0];
     const b = double[1];
-    const colour = field[a.i][a.j].colour;
+    const color = field[a.i][a.j].color;
     const checkPosition = (position:Position) => {
         if (!field[position.i] || !field[position.i][position.j]) return false;
-        if (field[position.i][position.j].colour === colour){
+        if (field[position.i][position.j].color === color){
             return true;
         }
         return false;
@@ -293,7 +295,7 @@ export {
     Status,
     find,
     gravitate,
-    generateColours,
-    randomColour,
+    generateColors,
+    randomColor,
     hint
 }

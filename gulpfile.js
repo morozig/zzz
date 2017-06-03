@@ -26,7 +26,9 @@ const paths = {
         'node_modules/mocha/mocha.css',
         'node_modules/jquery/dist/jquery.min.js'
     ],
-    pixi: ['node_modules/pixi.js/bin/pixi.min.js']
+    vendor: [
+        'node_modules/pixi.js/bin/pixi.min.js'
+    ]
 };
 
 const tsProject = ts.createProject('tsconfig.json');
@@ -81,13 +83,13 @@ gulp.task('copy-assets-release', () => {
 });
 
 gulp.task('copy-vendor-release', () => {
-    return gulp.src(paths.pixi)
+    return gulp.src(paths.vendor)
         .pipe(gulp.dest('build/release/vendor'));
 });
 
 gulp.task('webpack-app', () => {
     webpackConfig.module.rules[0].include = path.resolve(__dirname, "src");
-    return gulp.src('src/main.ts')
+    return gulp.src('src/index.tsx')
         .pipe(gulpWebpack(webpackConfig, webpack))
         .pipe(gulp.dest('build/release'));
 });
@@ -198,9 +200,9 @@ gulp.task('test', gulp.series(
 gulp.task('default', gulp.series(
     'compile',
     'mocha-node',
-    'prepare-release',
-    'prepare-browser-tests',
-    'mocha-browser'
+    'prepare-release'
+    // 'prepare-browser-tests',
+    // 'mocha-browser'
 ));
 
 gulp.task('rebuild', gulp.series(

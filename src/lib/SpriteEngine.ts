@@ -79,9 +79,12 @@ interface InputEvent{
 }
 
 const createEngine = () => {
-    const renderer = PIXI.autoDetectRenderer(400, 400);
-    const viewElement = document.getElementById('view');
-    viewElement.appendChild(renderer.view);
+    const canvasElement = document.getElementById('field')as HTMLCanvasElement;
+    const renderer = PIXI.autoDetectRenderer(
+        400, 400,
+        {
+            view: canvasElement
+        });
     const stage = new PIXI.Container();
     const inputChannel = CSP.createGenericChannel<InputEvent>();
     const tilesPerSecond = TILES_PER_SECOND;
@@ -113,18 +116,8 @@ const createEngine = () => {
         return sprite as Sprite;
     };
 
-    const maxFramesCount = 10;
-    let averageFrameTime = 0;
-    let lastFrame = (new Date).getTime();
-    let thisFrame = 0;
-    let framesCount = 0;
-
     const animate = () => {
         window.requestAnimationFrame(animate);
-        let thisFrameTime = (thisFrame = (new Date).getTime()) - lastFrame;
-        if (framesCount < maxFramesCount) framesCount++;
-        averageFrameTime += (thisFrameTime - averageFrameTime) / framesCount;
-        lastFrame = thisFrame;
         TWEEN.update();
         renderer.render(stage);
     }
@@ -172,14 +165,14 @@ const createEngine = () => {
         const pixiSprite = sprite as PIXI.Sprite;
         pixiSprite.destroy();
     };
-    const fps = document.getElementById('fps');
-    const scoreElement = document.getElementById('score');
+    // const scoreElement = document.getElementById('score');
     const setScore = (score: Number) => {
-        scoreElement.innerHTML = '' + score;
+        // scoreElement.innerHTML = '' + score;
+        console.log(score);
     };
-    setInterval(function(){
-        fps.innerHTML = '' + (1000 / averageFrameTime).toFixed();
-    }, 100);
+    // setInterval(function(){
+    //     fps.innerHTML = '' + (1000 / averageFrameTime).toFixed();
+    // }, 100);
     return {
         createSprite,
         start: animate,
@@ -202,10 +195,9 @@ const ortoNorm = (x: number, y: number) => {
         {i: 0, j: ySign};
 };
 
-const pipe = (viewFieldInChannel: CSP.Channel) => {
-    const viewFieldOutChannel = CSP.createChannel();
+const pipe = (spriteEngineInChannel: CSP.Channel) => {
+    const spriteEngineOutChannel = CSP.createChannel();
     (async () => {
-        await loadDOM();
         const engine = createEngine();
         await loadTextures(textures);
         engine.start();
@@ -237,9 +229,9 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
         let points = 0;
         (async () => {
             while (true){
-                const message = await viewFieldInChannel.take();
+                const message = await spriteEngineInChannel.take();
                 if (message === CSP.DONE){
-                    viewFieldOutChannel.close();
+                    spriteEngineOutChannel.close();
                     break;
                 }
                 if (message.topic === CSP.Topic.NewPoints){
@@ -268,7 +260,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                             }
                         }
                         const sprite = engine.createSprite({
-                            texture: textures[textureOffset + task.colour],
+                            texture: textures[textureOffset + task.color],
                             x: iTox(task.i),
                             y: jToy(task.j)
                         });
@@ -285,7 +277,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                         engine.tween(sprite, to, () => {
                             sprite.interactive = true;
                             zombiz[task.to.i][task.to.j] = sprite;
-                            viewFieldOutChannel.put({
+                            spriteEngineOutChannel.put({
                                 topic: CSP.Topic.FieldTaskDone,
                                 value: task
                             });
@@ -296,7 +288,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                         const sprite = zombiz[task.i][task.j];
                         sprite.interactive = false;
                         engine.destroy(sprite, () => {
-                            viewFieldOutChannel.put({
+                            spriteEngineOutChannel.put({
                                 topic: CSP.Topic.FieldTaskDone,
                                 value: task
                             });
@@ -339,7 +331,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
                             if (!direction) break;
                             const i = xToi(currentSprite.x);
                             const j = yToj(currentSprite.y);
-                            viewFieldOutChannel.put({
+                            spriteEngineOutChannel.put({
                                 topic: CSP.Topic.Swipe,
                                 value: {i, j, direction} as Field.Swipe
                             });
@@ -350,7 +342,7 @@ const pipe = (viewFieldInChannel: CSP.Channel) => {
             }
         })();
     })();
-    return viewFieldOutChannel;
+    return spriteEngineOutChannel;
 };
 
 export {

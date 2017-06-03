@@ -76,9 +76,9 @@ describe ('Field', () => {
     {
         const size = 8;
         const tasks = await start(size);
-        const allColours = new Set(tasks.map(task => task.colour));
-        const moreThanOneColourPresent = allColours.size > 1;
-        const actual = moreThanOneColourPresent;
+        const allColors = new Set(tasks.map(task => task.color));
+        const moreThanOneColorPresent = allColors.size > 1;
+        const actual = moreThanOneColorPresent;
         const expected = true;
         expect(actual).to.equal(expected);
     });
@@ -87,9 +87,9 @@ describe ('Field', () => {
     {
         const size = 10;
         const tasks = await start(size);
-        const allColours = new Set(tasks.map(task => task.colour));
-        const allColoursPresent = allColours.size === 7;
-        const actual = allColoursPresent;
+        const allColors = new Set(tasks.map(task => task.color));
+        const allColorsPresent = allColors.size === 7;
+        const actual = allColorsPresent;
         const expected = true;
         expect(actual).to.equal(expected);
     });
@@ -99,11 +99,11 @@ describe ('Field', () => {
         const size = 2;
         let tasks = await start(size);
         const result1 = new Set(tasks.map(
-            task => `${task.i}${task.j}${task.colour}`
+            task => `${task.i}${task.j}${task.color}`
         ));
         tasks = await start(size);
         const result2 = new Set(tasks.map(
-            task => `${task.i}${task.j}${task.colour}`
+            task => `${task.i}${task.j}${task.color}`
         ));
         const intersection = new Set([...result1].filter(x => result2.has(x)));
         const resultsAreSame = intersection.size === 4;
@@ -117,11 +117,11 @@ describe ('Field', () => {
         const size = 8;
         let tasks = await start(size);
         const result1 = new Set(tasks.map(
-            task => `${task.i}${task.j}${task.colour}`
+            task => `${task.i}${task.j}${task.color}`
         ));
         tasks = await start(size);
         const result2 = new Set(tasks.map(
-            task => `${task.i}${task.j}${task.colour}`
+            task => `${task.i}${task.j}${task.color}`
         ));
         const intersection = new Set([...result1].filter(x => result2.has(x)));
         const resultsAreDifferent = intersection.size < 33;

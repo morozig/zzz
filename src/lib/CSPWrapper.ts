@@ -6,7 +6,8 @@ const enum Topic {
     CloseChannel,
     Swipe,
     FieldTaskDone,
-    NewPoints
+    NewPoints,
+    ButtonPressed
 }
 
 interface Message {
@@ -63,6 +64,7 @@ const timeout = (delay: number) => {
 export {
     createChannel,
     createGenericChannel,
+    Message,
     Topic,
     DONE,
     Channel,

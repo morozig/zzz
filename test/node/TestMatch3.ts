@@ -31,9 +31,9 @@ const fromMatrix = (example: number[][]) => {
             return prev.map((colomn, index) => {
                 const number = current[index];
                 if (number === null) return colomn.concat(null);
-                const colour = Math.floor(number);
-                const status = (number - colour) * 10;
-                return colomn.concat({colour, status});
+                const color = Math.floor(number);
+                const status = (number - color) * 10;
+                return colomn.concat({color, status});
             })
         }, begin as Match3.Element[][]);
     return elements;
@@ -41,13 +41,13 @@ const fromMatrix = (example: number[][]) => {
 
 const create = (size: number) => {
     const elements: Match3.Element[][] = [];
-    const colours = Match3.generateColours(size);
+    const colors = Match3.generateColors(size);
     for (let i = 0; i < size; i++){
         elements[i] = [];
         for (let j = 0; j < size; j++){
-            const colour = colours[i][j];
+            const color = colors[i][j];
             const status = Match3.Status.Idle;
-            const element: Match3.Element = {colour, status};
+            const element: Match3.Element = {color, status};
             elements[i][j] = element;
         }
     }
@@ -335,7 +335,7 @@ describe ('Match3', () => {
             expect(actual).to.deep.equal(expected);
         });
     });
-    describe('.generateColours()', () => {
+    describe('.generateColors()', () => {
         it('should not contain groups', () => {
             const elements = create(8);
             const actual = Match3.find(elements);

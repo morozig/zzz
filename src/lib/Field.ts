@@ -8,7 +8,7 @@ const enum TaskAction {
     Remove
 }
 
-const enum Colour {
+const enum Color {
     Blue,
     Brown,
     Green,
@@ -34,7 +34,7 @@ interface Position {
 
 interface FieldTask extends Position {
     action: TaskAction;
-    colour?: number;
+    color?: number;
     to?: Position;
     zombiType?: ZombiType;
 }
@@ -50,7 +50,7 @@ interface Swipe extends Position{
 }
 
 interface Zombi extends Position{
-    colour: Colour;
+    color: Color;
     status: Match3.Status;
     zombiType: ZombiType;
     create?: {
@@ -66,16 +66,16 @@ interface KillTask {
 const createZombi = (
         i: number,
         j: number,
-        colour: Colour,
+        color: Color,
         zombiType: ZombiType,
         fieldOutChannel: CSP.Channel
     ) => {
     const status = Match3.Status.Busy;
-    const zombi: Zombi = {i, j, colour, status, zombiType};
+    const zombi: Zombi = {i, j, color, status, zombiType};
     const task: FieldTask = {
         i,
         j,
-        colour,
+        color,
         zombiType,
         action: TaskAction.CreateZombi
     };
@@ -107,7 +107,7 @@ const setElectricBomb = (
     const zombi = createZombi(
         i,
         j,
-        Colour.Chameleon,
+        Color.Chameleon,
         ZombiType.Electric,
         fieldOutChannel
     );
@@ -121,14 +121,14 @@ const spawn = (
         size: number,
         zombiz: Zombi[][]
     ) => {
-    const colours = Match3.generateColours(size);
+    const colors = Match3.generateColors(size);
     for (let i = 0; i < size; i++){
         zombiz[i] = [];
         for (let j = 0; j < size; j++){
             const zombi = createZombi(
                 i,
                 j,
-                colours[i][j],
+                colors[i][j],
                 ZombiType.Normal,
                 fieldOutChannel
             );
@@ -248,12 +248,12 @@ const pool = (
                         if (!zombi) break;
                         if (zombi.create){
                             const zombiType = zombi.create.zombiType;
-                            const colour = zombiType === ZombiType.Electric ? 
-                                Colour.Chameleon : zombi.colour;
+                            const color = zombiType === ZombiType.Electric ? 
+                                Color.Chameleon : zombi.color;
                             const newBomb = createZombi(
                                 task.i,
                                 task.j,
-                                colour,
+                                color,
                                 zombiType,
                                 fieldOutChannel
                             );
@@ -382,7 +382,7 @@ const update = (
                                     createZombi(
                                         i,
                                         j,
-                                        Match3.randomColour(size),
+                                        Match3.randomColor(size),
                                         ZombiType.Normal,
                                         fieldOutChannel
                                     );
@@ -528,13 +528,13 @@ const kill = (
             const toShoot: Set<Zombi> = new Set([bomb]);
             switch (bomb.zombiType){
                 case ZombiType.Electric: {
-                    const colour = (bomb.colour !== Colour.Chameleon) ?
-                        bomb.colour : Match3.randomColour(zombiz.length);
+                    const color = (bomb.color !== Color.Chameleon) ?
+                        bomb.color : Match3.randomColor(zombiz.length);
                     for (const coloumn of zombiz){
                         for (const zombi of coloumn){
                             if (zombi 
                                 && zombi.status === Match3.Status.Idle
-                                && zombi.colour === colour){
+                                && zombi.color === color){
                                 toShoot.add(zombi);
                             }
                         }
@@ -674,7 +674,7 @@ const pipe = (fieldInChannel: CSP.Channel) => {
                         if (!zombiTo ||
                             zombiTo.status != Match3.Status.Idle) break;
                         zombi.status = Match3.Status.Busy;
-                        zombi.colour = zombiTo.colour;
+                        zombi.color = zombiTo.color;
                         bombChannel.put(zombi);
                     } else {
                         swap(newCompositeTaskChannel, message.value, zombiz);

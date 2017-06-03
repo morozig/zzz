@@ -27,6 +27,6 @@ module.exports = {
         ]
     },
     externals: {
-        "PIXI": "pixi"
+        "pixi.js": "PIXI"
     }
 }
