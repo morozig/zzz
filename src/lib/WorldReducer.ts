@@ -11,6 +11,7 @@ const enum Status {
     Busy,
     Falling,
     Dead,
+    Waiting,
     Swapped
 }
 
@@ -164,9 +165,20 @@ const sideEffectSwap = (mutableState: WorldState, swipe: Swipe) => {
     const iTo = zombi.i + swipe.direction.i;
     const jTo = zombi.j + swipe.direction.j;
     const zombiTo = zombiz[iTo][jTo];
+    // if (zombi.status === Status.Busy ||
+    //     zombiTo.status === Status.Busy) return;
     zombi.status = Status.Busy;
     zombiTo.status = Status.Busy;
-    zombi.swipe = swipe.revert ? undefined : swipe;
+    zombi.swipe = swipe;
+    const revertSwipe: Swipe = {
+        i: iTo,
+        j: jTo,
+        direction: {
+            i: swipe.direction.i * -1,
+            j: swipe.direction.j * -1
+        }
+    };
+    zombiTo.swipe = revertSwipe;
     const temp = {
         i: zombi.i,
         j: zombi.j
@@ -257,7 +269,48 @@ const sideEffectTime = (mutableState: WorldState) => {
         if (((newX !== undefined ? newX : zombi.x) === targetX) &&
             ((newY !== undefined ? newY : zombi.y) === targetY) &&
             (zombi.animation === undefined)){
-            const newStatus = (zombi.swipe) ? Status.Swapped : Status.Falling;
+            let newStatus = Status.Falling;
+            if (zombi.swipe){
+                const swappedFrom: Zombi = mutableState.getIn([
+                    'zombiz',
+                    zombi.swipe.i,
+                    zombi.swipe.j
+                ]).toJS();
+                if (swappedFrom.swipe && swappedFrom.status === Status.Busy){
+                    newStatus = Status.Waiting;
+                } else if (swappedFrom.status === Status.Waiting){
+                    if (zombi.swipe.revert){
+                        newStatus = Status.Falling;
+                        mutableState.setIn([
+                            'zombiz',
+                            zombi.swipe.i,
+                            zombi.swipe.j,
+                            'status'
+                        ], Status.Falling);
+                        mutableState.setIn([
+                            'zombiz',
+                            zombi.i,
+                            zombi.j,
+                            'swipe'
+                        ], undefined);
+                        mutableState.setIn([
+                            'zombiz',
+                            zombi.swipe.i,
+                            zombi.swipe.j,
+                            'swipe'
+                        ], undefined);
+                    }
+                    else {
+                        newStatus = Status.Swapped;
+                        mutableState.setIn([
+                            'zombiz',
+                            zombi.swipe.i,
+                            zombi.swipe.j,
+                            'status'
+                        ], Status.Swapped);
+                    }
+                }
+            }
             mutableState.setIn([
                 'zombiz',
                 zombi.i,
@@ -390,8 +443,8 @@ const sideEffectCheck = (mutableState: WorldState) => {
     for (const colomn of zombiz){
         for (const zombi of colomn){
             if (zombi && zombi.swipe && zombi.status === Status.Swapped){
-                zombi.status = Status.Idle;
                 swapped.push(zombi);
+                zombi.status = Status.Idle;
             }
         }
     }
@@ -474,24 +527,31 @@ const sideEffectCheck = (mutableState: WorldState) => {
         ], 0);
     }
     for (const zombi of swapped){
-        const swappedFrom =
-            zombiz[zombi.swipe.i][zombi.swipe.j];
-        if (zombizInGroups.includes(zombi)
-            || zombizInGroups.includes(swappedFrom)){
+        const swappedFrom = zombiz[zombi.swipe.i][zombi.swipe.j];
+        if (zombizInGroups.includes(zombi)){
             mutableState.setIn([
                 'zombiz',
                 zombi.i,
                 zombi.j,
                 'swipe'
             ], undefined);
-            mutableState.setIn([
-                'zombiz',
-                swappedFrom.i,
-                swappedFrom.j,
-                'swipe'
-            ], undefined);
         } else {
-            swapBack.add(zombi);
+            if (zombizInGroups.includes(swappedFrom)){
+                mutableState.setIn([
+                    'zombiz',
+                    zombi.i,
+                    zombi.j,
+                    'swipe'
+                ], undefined);
+                mutableState.setIn([
+                    'zombiz',
+                    zombi.i,
+                    zombi.j,
+                    'status'
+                ], Status.Falling);
+            } else {
+                 if (!swapBack.has(swappedFrom)) swapBack.add(zombi);
+            }
         }
     }
     for (const zombi of swapBack){

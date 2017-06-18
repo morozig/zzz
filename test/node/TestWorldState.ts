@@ -337,4 +337,97 @@ describe ('WorldReducer', () => {
             );
         expect(actual).to.equal(expected);
     });
+    it('() should clear swapped status', () => {
+        const worldState = fromMatrix([
+            [0],
+            [0],
+            [0],
+            [1.5]
+        ])
+            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 0,
+                    j: -1
+                }
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 0, 'status']);
+        const expected = Status.Falling;
+        expect(actual).to.equal(expected);
+    });
+    it('() should set status to waiting', () => {
+        const worldState = fromMatrix([
+            [0.1],
+            [1.1]
+        ])
+            .setIn(['zombiz', 0, 1, 'y'], 0.1)
+            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 0,
+                    j: -1
+                }
+            }))
+            .setIn(['zombiz', 0, 1, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 0,
+                direction: {
+                    i: 0,
+                    j: 1
+                }
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 0, 'status']);
+        const expected = Status.Waiting;
+        expect(actual).to.equal(expected);
+    });
+    it('() should clear swapped status', () => {
+        const worldState = fromMatrix([
+            [0],
+            [0],
+            [0],
+            [1.5]
+        ])
+            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 0,
+                    j: -1
+                }
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 0, 'status']);
+        const expected = Status.Falling;
+        expect(actual).to.equal(expected);
+    });
+    it('() should clear waiting status', () => {
+        const worldState = fromMatrix([
+            [0.4],
+            [1.1]
+        ])
+            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 0,
+                    j: -1
+                }
+            }))
+            .setIn(['zombiz', 0, 1, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 0,
+                direction: {
+                    i: 0,
+                    j: 1
+                }
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 1, 'status']);
+        const expected = Status.Swapped;
+        expect(actual).to.equal(expected);
+    });
 });
