@@ -62,13 +62,24 @@ type ZombiKeys =
     'swipe' |
     'zombiType';
 
-type ZombiMap = Immutable.Map<ZombiKeys,number>;
+type ZombiMap = Immutable.Map<ZombiKeys, number>;
+
+type WorldStateKeys =
+    'zombiz' |
+    'score' |
+    'count';
+
+type ZombizMap = Immutable.List<
+        Immutable.List<ZombiMap>
+    >;
+
+type WorldStateValues =
+    ZombizMap |
+    number;
 
 type WorldState = Immutable.Map<
-    'zombiz',
-    Immutable.List<
-        Immutable.List<ZombiMap>
-    >
+    WorldStateKeys,
+    WorldStateValues
 >;
 
 interface Direction{
@@ -140,7 +151,7 @@ const swap = (worldState: WorldState, action: WorldAction) => {
     const iTo = iFrom + swipe.direction.i;
     const jTo = jFrom + swipe.direction.j;
     if (iTo < 0 || jTo < 0) return worldState;
-    if (!worldState.get('zombiz').has(iTo)) return worldState;
+    if (!(worldState.get('zombiz') as ZombizMap).has(iTo)) return worldState;
     if (!worldState.getIn(['zombiz', iTo]).has(jTo)) return worldState;
     const zombiTo: ZombiMap = worldState.getIn([
         'zombiz',
@@ -160,7 +171,7 @@ const swap = (worldState: WorldState, action: WorldAction) => {
 };
 
 const sideEffectSwap = (mutableState: WorldState, swipe: Swipe) => {
-    const zombiz: Zombi[][] = mutableState.get('zombiz').toJS();
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
     const zombi = zombiz[swipe.i][swipe.j];
     const iTo = zombi.i + swipe.direction.i;
     const jTo = zombi.j + swipe.direction.j;
@@ -169,15 +180,16 @@ const sideEffectSwap = (mutableState: WorldState, swipe: Swipe) => {
     //     zombiTo.status === Status.Busy) return;
     zombi.status = Status.Busy;
     zombiTo.status = Status.Busy;
-    zombi.swipe = swipe;
     const revertSwipe: Swipe = {
         i: iTo,
         j: jTo,
         direction: {
             i: swipe.direction.i * -1,
             j: swipe.direction.j * -1
-        }
+        },
+        revert: swipe.revert
     };
+    zombi.swipe = swipe;
     zombiTo.swipe = revertSwipe;
     const temp = {
         i: zombi.i,
@@ -200,12 +212,12 @@ const sideEffectSwap = (mutableState: WorldState, swipe: Swipe) => {
 };
 
 const sideEffectTime = (mutableState: WorldState) => {
-    const iSize = mutableState.get('zombiz').size;
+    const iSize = (mutableState.get('zombiz') as ZombizMap).size;
     const jSize = mutableState.getIn(['zombiz', 0]).size;
     const xSpeed = TILES_PER_SECOND / 60 / iSize;
     const ySpeed = TILES_PER_SECOND / 60 / jSize;
-    const busyZombiz: Zombi[] = mutableState
-        .get('zombiz')
+    const busyZombiz: Zombi[] = (mutableState
+        .get('zombiz') as ZombizMap)
         .flatten(true)
         .filter(zombi => zombi)
         .filter(zombi => zombi.get('status') == Status.Busy)
@@ -318,7 +330,7 @@ const sideEffectTime = (mutableState: WorldState) => {
                 'status'
             ], newStatus);
         }
-        if (newAnimation === 1){
+        if (newAnimation === 1 || zombi.animation === 1){
             if (zombi.create){
                 const zombiType = zombi.create.zombiType;
                 const color = zombiType === ZombiType.Electric ? 
@@ -344,12 +356,16 @@ const sideEffectTime = (mutableState: WorldState) => {
                     'status'
                 ], Status.Dead);
             }
+            mutableState.update(
+                'score',
+                score => score as number + 1
+            );
         }
     }
 };
 
 const sideEffectExplode = (mutableState: WorldState, bomb: Zombi) => {
-    const zombiz: Zombi[][] = mutableState.get('zombiz').toJS();
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
     const toShoot: Set<Zombi> = new Set([bomb]);
     switch (bomb.zombiType){
         case ZombiType.Electric: {
@@ -437,7 +453,7 @@ const sideEffectExplode = (mutableState: WorldState, bomb: Zombi) => {
 };
 
 const sideEffectCheck = (mutableState: WorldState) => {
-    const zombiz: Zombi[][] = mutableState.get('zombiz').toJS();
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
     const swapped = [] as Zombi[];
     const swapBack: Set<Zombi> = new Set();
     for (const colomn of zombiz){
@@ -570,7 +586,7 @@ const sideEffectCheck = (mutableState: WorldState) => {
 };
 
 const sideEffectGravitate = (mutableState: WorldState) => {
-    const zombiz: Zombi[][] = mutableState.get('zombiz').toJS();
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
     const indeces = Match3.gravitate(zombiz);
     if (indeces.toFall.length > 0){
         const size = zombiz.length;
@@ -614,12 +630,12 @@ const sideEffectGravitate = (mutableState: WorldState) => {
 };
 
 const sideEffectHint = (mutableState: WorldState) => {
-    const areAllIdle = mutableState
-        .get('zombiz')
+    const areAllIdle = (mutableState
+        .get('zombiz') as ZombizMap)
         .flatten(true)
         .every(zombi => zombi && zombi.get('status') === Status.Idle);
     if (!areAllIdle) return;
-    const zombiz: Zombi[][] = mutableState.get('zombiz').toJS();
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
     const hints = Match3.hint(zombiz);
     if (hints.length === 0){
         const noElectricBombs = zombiz.every(
@@ -645,8 +661,8 @@ const sideEffectHint = (mutableState: WorldState) => {
 };
 
 const time = (worldState: WorldState) => {
-    const needUpdate = worldState
-        .get('zombiz')
+    const needUpdate = (worldState
+        .get('zombiz') as ZombizMap)
         .flatten(true)
         .some(zombi => zombi && zombi.get('status') !== Status.Idle);
     return needUpdate ? worldState.withMutations(mutableState => {
@@ -660,7 +676,8 @@ const reducer = (
     ) => {
     if (!worldState){
         const zombiz = spawn(8);
-        return Immutable.fromJS({zombiz}) as WorldState;
+        const score = 0;
+        return Immutable.fromJS({zombiz, score}) as WorldState;
     } else {
         if (action) return swap(worldState, action);
         else return time(worldState);
@@ -677,5 +694,6 @@ export {
     ANIMATION_PER_SECOND,
     ZombiKeys,
     ZombiType,
-    Swipe
+    Swipe,
+    ZombizMap
 }

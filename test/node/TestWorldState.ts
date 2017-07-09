@@ -11,7 +11,8 @@ import {
     ANIMATION_PER_SECOND,
     ZombiKeys,
     ZombiType,
-    Swipe
+    Swipe,
+    ZombizMap
 } from '../../src/lib/WorldReducer';
 import Immutable from 'immutable';
 import * as CSP from '../../src/lib/CSPWrapper';
@@ -31,14 +32,14 @@ const fromMatrix = (example: number[][]) => {
                 if (number === null) return colomn.concat(null);
                 const color = Math.floor(number);
                 const status = Math.round((number - color) * 10);
-                return colomn.concat({color, status});
+                return colomn.concat({ color, status });
             })
         }, begin);
     const zombiz: Zombi[][] = [];
     const height = elements[0].length;
-    for (let i = 0; i < width; i++){
+    for (let i = 0; i < width; i++) {
         zombiz[i] = [];
-        for (let j = 0; j < height; j++){
+        for (let j = 0; j < height; j++) {
             const element = elements[i][j];
             const zombi: Zombi = {
                 color: element.color,
@@ -53,26 +54,33 @@ const fromMatrix = (example: number[][]) => {
             zombiz[i][j] = zombi;
         }
     }
-    return Immutable.fromJS({zombiz}) as WorldState;
+    const score = 0;
+    return Immutable.fromJS({zombiz, score}) as WorldState;
 };
 
 const dropProperties = (worldState: WorldState, properties: ZombiKeys[]) => {
-    return worldState.map(zombiz => zombiz.map(colomn => colomn.map(
-        zombi => zombi.withMutations(
-            zombi => {
-                let mutableZombi = zombi;
-                for (const property of properties){
-                    mutableZombi = mutableZombi.delete(property);
-                }
-                return mutableZombi;
-            }
-    ))));
+    return worldState.updateIn(
+        ['zombiz'],
+        zombiz => (zombiz as ZombizMap).map(
+            colomn => colomn.map(
+                zombi => zombi.withMutations(
+                    zombi => {
+                        let mutableZombi = zombi;
+                        for (const property of properties) {
+                            mutableZombi = mutableZombi.delete(property);
+                        }
+                        return mutableZombi;
+                    }
+                )
+            )
+        )
+    );
 };
 
-describe ('WorldReducer', () => {
+describe('WorldReducer', () => {
     it('() should create 64 zombiz', () => {
         const worldState = reducer();
-        const actual = worldState.get('zombiz')
+        const actual = (worldState.get('zombiz') as ZombizMap)
             .reduce((sum, colomn) => sum + colomn.size, 0);
         const expected = 64;
         expect(actual).to.equal(expected);
@@ -102,7 +110,7 @@ describe ('WorldReducer', () => {
                 [0.1],
                 [1.1]
             ]
-        ), ['id', 'x', 'y']);
+            ), ['id', 'x', 'y']);
         expect(actual).to.equal(expected);
     });
     it('() should update y', () => {
@@ -294,8 +302,8 @@ describe ('WorldReducer', () => {
             [1.2],
             [0]
         ]);
-        const actual = reducer(worldState)
-            .get('zombiz')
+        const actual = (reducer(worldState)
+            .get('zombiz') as ZombizMap)
             .flatten(true)
             .filter(zombi => zombi.get('zombiType') === ZombiType.Electric)
             .count();
@@ -327,14 +335,14 @@ describe ('WorldReducer', () => {
             ['zombiType']
         );
         const expected = dropProperties(
-                fromMatrix([
-                    [1.1],
-                    [0.1]
-                ])
-                    .setIn(['zombiz', 0, 0, 'animation'], 0)
-                    .setIn(['zombiz', 0, 1, 'animation'], 0),
-                ['zombiType']
-            );
+            fromMatrix([
+                [1.1],
+                [0.1]
+            ])
+                .setIn(['zombiz', 0, 0, 'animation'], 0)
+                .setIn(['zombiz', 0, 1, 'animation'], 0),
+            ['zombiType']
+        );
         expect(actual).to.equal(expected);
     });
     it('() should clear swapped status', () => {
@@ -354,6 +362,55 @@ describe ('WorldReducer', () => {
             }));
         const actual = reducer(worldState)
             .getIn(['zombiz', 0, 0, 'status']);
+        const expected = Status.Falling;
+        expect(actual).to.equal(expected);
+    });
+    it('() should clear swapped status', () => {
+        const worldState = fromMatrix([
+            [0],
+            [0],
+            [0],
+            [1.5]
+        ])
+            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 0,
+                    j: -1
+                }
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 0, 'status']);
+        const expected = Status.Falling;
+        expect(actual).to.equal(expected);
+    });
+    it('() should clear revert swipe on first row', () => {
+        const worldState = fromMatrix([
+            [1, 2, 3],
+            [0.1, 0.1, 4],
+            [5, 6, 7]
+        ])
+            .setIn(['zombiz', 0, 1, 'swipe'], Immutable.Map({
+                i: 1,
+                j: 1,
+                direction: {
+                    i: -1,
+                    j: 0
+                },
+                revert: true
+            }))
+            .setIn(['zombiz', 1, 1, 'swipe'], Immutable.Map({
+                i: 0,
+                j: 1,
+                direction: {
+                    i: 1,
+                    j: 0
+                },
+                revert: true
+            }));
+        const actual = reducer(worldState)
+            .getIn(['zombiz', 0, 1, 'status']);
         const expected = Status.Falling;
         expect(actual).to.equal(expected);
     });
@@ -384,26 +441,6 @@ describe ('WorldReducer', () => {
         const expected = Status.Waiting;
         expect(actual).to.equal(expected);
     });
-    it('() should clear swapped status', () => {
-        const worldState = fromMatrix([
-            [0],
-            [0],
-            [0],
-            [1.5]
-        ])
-            .setIn(['zombiz', 0, 0, 'swipe'], Immutable.Map({
-                i: 0,
-                j: 1,
-                direction: {
-                    i: 0,
-                    j: -1
-                }
-            }));
-        const actual = reducer(worldState)
-            .getIn(['zombiz', 0, 0, 'status']);
-        const expected = Status.Falling;
-        expect(actual).to.equal(expected);
-    });
     it('() should clear waiting status', () => {
         const worldState = fromMatrix([
             [0.4],
@@ -428,6 +465,32 @@ describe ('WorldReducer', () => {
         const actual = reducer(worldState)
             .getIn(['zombiz', 0, 1, 'status']);
         const expected = Status.Swapped;
+        expect(actual).to.equal(expected);
+    });
+    it('() should increase score by 1', () => {
+        const worldState = fromMatrix([
+            [0],
+            [0.1]
+        ])
+            .setIn(['zombiz', 0, 0, 'animation'], 1);
+        const actual = reducer(worldState)
+            .getIn(['score']);
+        const expected = 1;
+        expect(actual).to.equal(expected);
+    });
+    it('() should increase score by 3', () => {
+        const worldState = fromMatrix([
+            [0.1],
+            [0.1],
+            [0.1]
+        ])
+            .setIn(['zombiz', 0, 0, 'animation'], 1)
+            .setIn(['zombiz', 0, 1, 'animation'], 1)
+            .setIn(['zombiz', 0, 2, 'animation'], 1)
+            .setIn(['score'], 1);
+        const actual = reducer(worldState)
+            .getIn(['score']);
+        const expected = 4;
         expect(actual).to.equal(expected);
     });
 });

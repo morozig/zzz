@@ -6,7 +6,8 @@ import { WorldState,
     Zombi,
     reducer,
     Status,
-    ZombiType
+    ZombiType,
+    ZombizMap
  } from './WorldReducer';
 
 interface World {
@@ -38,5 +39,6 @@ export{
      WorldAction,
      World,
      Status,
-     ZombiType
+     ZombiType,
+     ZombizMap
 }

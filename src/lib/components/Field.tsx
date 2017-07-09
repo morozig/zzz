@@ -3,40 +3,19 @@ import { Stage } from 'react-pixi';
 import Background from './Background';
 import Zombiz from './Zombiz';
 import {
-    WorldState,
-    World,
-    createWorld,
-    WorldAction
+    WorldAction,
+    ZombizMap
 } from '../World';
 
-interface FieldState {
-    data: WorldState
+interface FieldProps {
+    zombiz: ZombizMap;
+    dispatch: (action: WorldAction) => void;
 }
 
-class Field extends React.Component<undefined, FieldState> {
-    world: World;
-    dispatch = (action: WorldAction) => {
-        this.world.dispatch(action);
-    };
-    constructor() {
-        super();
-        this.state = {
-            data: null
-        };
-    }
-    componentDidMount() {
-        this.world = createWorld();
-        (async () => {
-            while (true){
-                const worldState = await this.world.outChannel.take();
-                this.setState({data: worldState});
-            }
-        })();
-    }
+class Field extends React.Component<FieldProps, undefined> {
     render() {
-        const data = this.state.data;
-        const flatZombiz = data && data
-            .get('zombiz')
+        const zombiz: ZombizMap = this.props.zombiz;
+        const flatZombiz = zombiz && zombiz
             .flatten(true)
             .toArray()
             .filter(zombi => zombi)
@@ -49,10 +28,10 @@ class Field extends React.Component<undefined, FieldState> {
                 scale = "1,-1"
             >
                 <Background/>
-                { data &&
+                { zombiz &&
                     <Zombiz
                         zombiz = {flatZombiz}
-                        dispatch = {this.dispatch}
+                        dispatch = {this.props.dispatch}
                     /> 
                 }
             </Stage>
