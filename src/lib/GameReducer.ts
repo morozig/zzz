@@ -13,6 +13,8 @@ const reducer = (
     switch (action.value){
         case 'play':
             return data.set('page', 'Playing');
+        case 'home':
+            return data.set('page', 'Home');
     }
     return data;
 };

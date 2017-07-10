@@ -7,7 +7,8 @@ import { WorldState,
     reducer,
     Status,
     ZombiType,
-    ZombizMap
+    ZombizMap,
+    GamePhase
  } from './WorldReducer';
 
 interface World {
@@ -40,5 +41,6 @@ export{
      World,
      Status,
      ZombiType,
-     ZombizMap
+     ZombizMap,
+     GamePhase
 }

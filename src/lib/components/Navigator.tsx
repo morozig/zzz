@@ -19,7 +19,9 @@ class Navigator extends React.Component<NavigatorProps, undefined> {
                 break;
             }
             case 'Playing':{
-                page = <PlayingPage/>;
+                page = <PlayingPage
+                    dispatch = {this.props.dispatch}
+                />;
                 break;
             }    
         }

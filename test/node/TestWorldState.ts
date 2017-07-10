@@ -12,7 +12,8 @@ import {
     ZombiKeys,
     ZombiType,
     Swipe,
-    ZombizMap
+    ZombizMap,
+    GamePhase
 } from '../../src/lib/WorldReducer';
 import Immutable from 'immutable';
 import * as CSP from '../../src/lib/CSPWrapper';
@@ -55,7 +56,15 @@ const fromMatrix = (example: number[][]) => {
         }
     }
     const score = 0;
-    return Immutable.fromJS({zombiz, score}) as WorldState;
+    const health = 100;
+    const gamePhase = GamePhase.Active;
+    return Immutable.fromJS(
+        {
+            zombiz,
+            score,
+            health,
+            gamePhase
+        }) as WorldState;
 };
 
 const dropProperties = (worldState: WorldState, properties: ZombiKeys[]) => {
@@ -226,7 +235,8 @@ describe('WorldReducer', () => {
             [0],
             [0]
         ]);
-        const changed = reducer(worldState);
+        const changed = reducer(worldState)
+            .set('health', 100);
         const actual = dropProperties(changed, ['animation']);
         const expected = fromMatrix([
             [0.1],
@@ -491,6 +501,29 @@ describe('WorldReducer', () => {
         const actual = reducer(worldState)
             .getIn(['score']);
         const expected = 4;
+        expect(actual).to.equal(expected);
+    });
+    it('() should set health to 100', () => {
+        const worldState = reducer();
+        const actual = worldState.get('health') as number;
+        const expected = 100;
+        expect(actual).to.equal(expected);
+    });
+    it('() should damage health over time', () => {
+        const worldState1 = reducer();
+        const health1 = worldState1.get('health') as number;
+        const worldState2 = reducer(worldState1);
+        const health2 = worldState2.get('health') as number;
+        const actual = health1 > health2;
+        const expected = true;
+        expect(actual).to.equal(expected);
+    });
+    it('() should end game', () => {
+        const worldState = reducer()
+            .set('health', 0.0000001);
+        const actual = reducer(worldState)
+            .get('gamePhase') as GamePhase;
+        const expected = GamePhase.Over;
         expect(actual).to.equal(expected);
     });
 });

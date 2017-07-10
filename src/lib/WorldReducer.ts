@@ -4,6 +4,7 @@ import * as Match3 from './Match3';
 const MAX_COLORS = 7;
 const TILES_PER_SECOND = 12;
 const ANIMATION_PER_SECOND = 12;
+const DAMAGE_PER_SECOND = 100 / 60;
 // const TILES_PER_SECOND = 0.1;
 
 const enum Status {
@@ -32,6 +33,12 @@ const enum Color {
     White,
     Yellow,
     Chameleon
+}
+
+const enum GamePhase {
+    Active,
+    Final,
+    Over
 }
 
 interface Zombi {
@@ -67,7 +74,9 @@ type ZombiMap = Immutable.Map<ZombiKeys, number>;
 type WorldStateKeys =
     'zombiz' |
     'score' |
-    'count';
+    'count' |
+    'health' |
+    'gamePhase';
 
 type ZombizMap = Immutable.List<
         Immutable.List<ZombiMap>
@@ -75,7 +84,8 @@ type ZombizMap = Immutable.List<
 
 type WorldStateValues =
     ZombizMap |
-    number;
+    number |
+    GamePhase;
 
 type WorldState = Immutable.Map<
     WorldStateKeys,
@@ -660,14 +670,67 @@ const sideEffectHint = (mutableState: WorldState) => {
     }
 };
 
+const sideEffectTriggerSomeBomb = (
+    mutableState: WorldState,
+    bombs: Zombi[]
+    ) => {
+    const zombiz: Zombi[][] = (mutableState.get('zombiz') as ZombizMap).toJS();
+    const zombi = bombs[Math.floor(Math.random() * bombs.length)];
+    mutableState.setIn([
+        'zombiz',
+        zombi.i,
+        zombi.j,
+        'status'
+    ], Status.Busy);
+    mutableState.setIn([
+        'zombiz',
+        zombi.i,
+        zombi.j,
+        'animation'
+    ], 0);
+};
+
 const time = (worldState: WorldState) => {
-    const needUpdate = (worldState
+    let currentState = worldState;
+    let gamePhase = worldState.get('gamePhase') as GamePhase;
+    if (gamePhase === GamePhase.Active){
+        const health = worldState.get('health') as number;
+        const damagedHealth = health - DAMAGE_PER_SECOND / 60;
+        if (damagedHealth <= 0){
+            currentState = worldState
+                .set('health', 0)
+                .set('gamePhase', GamePhase.Final);
+            gamePhase = GamePhase.Final;
+        } else {
+            currentState = worldState.set('health', damagedHealth);
+        }
+    }
+    const needUpdate = (currentState
         .get('zombiz') as ZombizMap)
         .flatten(true)
         .some(zombi => zombi && zombi.get('status') !== Status.Idle);
-    return needUpdate ? worldState.withMutations(mutableState => {
+    if (gamePhase === GamePhase.Final){
+        if (!needUpdate){
+            const bombs = (currentState
+                .get('zombiz') as ZombizMap)
+                .flatten(true)
+                .filter(zombi => zombi)
+                .filter(zombi => zombi.get('zombiType') !== ZombiType.Normal)
+                .map(zombi => zombi.toJS())
+                .toArray();
+            if (bombs.length > 0) {
+                currentState = currentState.withMutations(mutableState => {
+                    sideEffectTriggerSomeBomb(mutableState, bombs);
+                });
+            } else {
+                return currentState
+                    .set('gamePhase', GamePhase.Over);
+            }
+        }
+    }
+    return needUpdate ? currentState.withMutations(mutableState => {
         sideEffectTime(mutableState);
-    }) : worldState;
+    }) : currentState;
 };
 
 const reducer = (
@@ -677,9 +740,23 @@ const reducer = (
     if (!worldState){
         const zombiz = spawn(8);
         const score = 0;
-        return Immutable.fromJS({zombiz, score}) as WorldState;
+        const health = 100;
+        const gamePhase = GamePhase.Active;
+        return Immutable.fromJS(
+            {
+                zombiz,
+                score,
+                health,
+                gamePhase
+            }
+        ) as WorldState;
     } else {
-        if (action) return swap(worldState, action);
+        if (action) {
+            const gamePhase = worldState.get('gamePhase') as GamePhase;
+            return (gamePhase === GamePhase.Active) ? 
+                swap(worldState, action) : 
+                worldState;
+        }
         else return time(worldState);
     };
 };
@@ -695,5 +772,6 @@ export {
     ZombiKeys,
     ZombiType,
     Swipe,
-    ZombizMap
+    ZombizMap,
+    GamePhase
 }

@@ -1,30 +1,36 @@
 import React from 'react';
 import Field from './Field';
 import Score from './Score';
+import Health from './Health';
 import {
     WorldState,
     World,
     createWorld,
     WorldAction,
-    ZombizMap
+    ZombizMap,
+    GamePhase
 } from '../World';
+import { Action } from '../GameReducer';
 
 interface PlayingPageState {
     data: WorldState
 }
 
-class PlayingPage extends React.Component<undefined, PlayingPageState> {
+interface PlayingPageProps {
+    dispatch: (action: Action) => void;
+}
+
+class PlayingPage extends React.Component<PlayingPageProps, PlayingPageState> {
     world: World;
-    dispatch = (action: WorldAction) => {
+    worldDispatch = (action: WorldAction) => {
         this.world.dispatch(action);
     };
-    constructor() {
-        super();
-        this.state = {
-            data: null
-        };
-    }
-    componentDidMount() {
+    home = () => {
+        this.props.dispatch({
+            value: 'home'
+        });
+    };
+    start = () => {
         this.world = createWorld();
         (async () => {
             while (true){
@@ -32,21 +38,55 @@ class PlayingPage extends React.Component<undefined, PlayingPageState> {
                 this.setState({data: worldState});
             }
         })();
+    };
+
+    constructor() {
+        super();
+        this.state = {
+            data: null
+        };
+    }
+    componentDidMount() {
+        this.start();
     }
     render() {
         const data = this.state.data;
         const zombiz = data && data.get('zombiz') as ZombizMap;
         const score = data && data.get('score') as number;
-        return (
+        const health = data && data.get('health') as number;
+        const gamePhase = data && data.get('gamePhase') as GamePhase;
+        return (gamePhase !== GamePhase.Over) ? (
             <div>
                 <Score
                     score = {score}
                 />
                 <Field
                     zombiz = {zombiz}
-                    dispatch = {this.dispatch}
+                    dispatch = {this.worldDispatch}
                 />
-                <p>Health: 100%</p>
+                <Health
+                    health = {health}
+                />
+            </div>
+        ) : (
+            <div>
+                <Score
+                    score = {score}
+                />
+                <Field
+                    zombiz = {zombiz}
+                    dispatch = {this.worldDispatch}
+                />
+                <p>
+                    <span>
+                        <button onClick = {this.start}>
+                            Restart
+                        </button>
+                        <button onClick = {this.home}>
+                            Home
+                        </button>
+                    </span>
+                </p>
             </div>
         );
     }
